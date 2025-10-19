@@ -62,7 +62,11 @@ int main()
 
     // 创建VBO
     unsigned int VBO;
+    unsigned int VAO;
     glGenBuffers(1, &VBO);
+    glGenVertexArrays(1, &VAO);
+    // 绑定 VAO 对象
+    glBindVertexArray(VAO);
 
     // 绑定缓冲
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
@@ -70,6 +74,12 @@ int main()
     // 填充数据
     // 最后一个参数用来将绘制数据放到合适位置，不变的数据放普速存储区，变得多的放在高速存储区
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+    // 设置顶点属性指针
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+
+    glBindVertexArray(0);
 
     // 创建顶点和片段着色器
     unsigned int vertexShader = glCreateShader(GL_VERTEX_SHADER); // 创建一个顶点着色器类型的 着色器

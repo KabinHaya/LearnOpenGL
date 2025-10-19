@@ -7,6 +7,7 @@ const char* vertexShaderSource = "#version 330 core\n"
                                  "void main()\n"
                                  "{\n"
                                  "gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0f);\n"
+                                 "gl_PointSize = 10.0f;\n"
                                  "}\n";
 const char* fragmentShaderSource = "#version 330 core\n"
                                    "out vec4 FragColor;\n"
@@ -47,6 +48,7 @@ int main()
     // 从左下到右上
     // 这是渲染窗口
     glViewport(0, 0, 800, 600);
+    glEnable(GL_PROGRAM_POINT_SIZE);
     glfwSetFramebufferSizeCallback(window, [](GLFWwindow* window, int width, int height)
         {
             glViewport(0, 0, width, height);
@@ -143,6 +145,12 @@ int main()
         // 渲染指令
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
+
+        glUseProgram(shaderProgram);
+        glBindVertexArray(VAO);
+        glDrawArrays(GL_POINTS, 0, 3);
+
+        glBindVertexArray(0);
 
         glfwSwapBuffers(window);
         glfwPollEvents();

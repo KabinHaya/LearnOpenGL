@@ -23,11 +23,8 @@ find_library(MYLIB_LIBRARY
         glfw3
         assimp-vc143-mtd
     PATHS 
-        if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-            set(LIB_DIR ${CMAKE_SOURCE_DIR}/lib/Debug)
-        else()
-            set(LIB_DIR ${CMAKE_SOURCE_DIR}/lib/Release)
-        endif()
+        set(LIB_DIR ${CMAKE_SOURCE_DIR}/lib)
+        
     NO_DEFAULT_PATH
 )
 

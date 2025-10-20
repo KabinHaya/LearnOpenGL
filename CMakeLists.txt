@@ -13,7 +13,7 @@ project ("LearningOpenGL")
 
 include_directories(${CMAKE_SOURCE_DIR}/include)
 set(MYLIB_INCLUDE_DIR 
-    ${CMAKE_SOURCE_DIR}/include 
+    ${CMAKE_SOURCE_DIR}/include
     CACHE PATH 
         "Header directory of OpenGL"
 )
@@ -21,8 +21,13 @@ set(MYLIB_INCLUDE_DIR
 find_library(MYLIB_LIBRARY
     NAMES 
         glfw3
+        assimp-vc143-mtd
     PATHS 
-        ${CMAKE_SOURCE_DIR}/lib
+        if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+            set(LIB_DIR ${CMAKE_SOURCE_DIR}/lib/Debug)
+        else()
+            set(LIB_DIR ${CMAKE_SOURCE_DIR}/lib/Release)
+        endif()
     NO_DEFAULT_PATH
 )
 
@@ -40,3 +45,4 @@ add_subdirectory (01.HelloWindow)
 add_subdirectory (02.HelloTriangle)
 add_subdirectory (03.HelloTriangleExercise)
 add_subdirectory (04.ShaderGLSL)
+add_subdirectory (05.ShaderClass)

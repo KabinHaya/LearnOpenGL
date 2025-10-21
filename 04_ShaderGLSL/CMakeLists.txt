@@ -2,20 +2,22 @@
 #
 
 # 将源代码添加到此项目的可执行文件。
-add_executable (04_ShaderGLSL
+set(PROJECT_NAME 04_ShaderGLSL)
+
+add_executable (${PROJECT_NAME}
     main2.cpp
 
     ${GLAD_SRC_PATH}
  )
 
 if (CMAKE_VERSION VERSION_GREATER 3.12)
-  set_property(TARGET 04_ShaderGLSL  PROPERTY CXX_STANDARD 20)
+  set_property(TARGET ${PROJECT_NAME}  PROPERTY CXX_STANDARD 20)
 endif()
 
 # TODO: 如有需要，请添加测试并安装目标。
-target_include_directories(04_ShaderGLSL
+target_include_directories(${PROJECT_NAME}
     PRIVATE ${MYLIB_INCLUDE_DIR}
 )
-target_link_libraries(04_ShaderGLSL
+target_link_libraries(${PROJECT_NAME}
     ${MYLIB_LIBRARY}
 )

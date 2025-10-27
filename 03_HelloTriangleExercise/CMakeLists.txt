@@ -7,7 +7,7 @@ set(PROJECT_NAME 03_HelloTriangleExercise)
 add_executable (${PROJECT_NAME}
     main_Exercise3.cpp
 
-    ${GLAD_SRC_PATH}
+    ${GLAD_SRC}
 )
 
 if (CMAKE_VERSION VERSION_GREATER 3.12)

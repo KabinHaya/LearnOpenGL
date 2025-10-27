@@ -5,7 +5,7 @@ set(COPY_RESOURCES 10_CopyResources)
 add_executable (${PROJECT_NAME}
     main.cpp
 
-    ${GLAD_SRC_PATH}
+    ${GLAD_SRC}
  )
 
 if (CMAKE_VERSION VERSION_GREATER 3.12)

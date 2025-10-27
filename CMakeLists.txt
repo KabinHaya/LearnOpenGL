@@ -36,9 +36,16 @@ set(MYLIB_LIBRARY
         "Path to OpenGL" 
     FORCE
 )
-set(GLAD_SRC_PATH 
-    ${CMAKE_SOURCE_DIR}/ThirdParty/src/glad.c
+
+file(GLOB GLAD_SRC
+    "${CMAKE_SOURCE_DIR}/ThirdParty/src/glad/glad.c"
 )
+
+# TODO: 这里应该需要修改，要么编译成库
+file(GLOB IMGUI_SRC
+    "${CMAKE_SOURCE_DIR}/ThirdParty/include/imgui/*.cpp"
+)
+
 # 包含子项目。
 add_subdirectory (01_HelloWindow)
 add_subdirectory (02_HelloTriangle)
@@ -53,3 +60,4 @@ add_subdirectory (10_UsePlaneGeometry)
 add_subdirectory (11_UseSphereGeometry)
 add_subdirectory (12_UseBoxGeometry)
 add_subdirectory (13_ModelViewProjection)
+add_subdirectory (14_UseImageUI)

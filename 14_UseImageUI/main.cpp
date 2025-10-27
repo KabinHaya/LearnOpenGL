@@ -7,6 +7,9 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <tools/shader.h>
 #include <tools/stb_image.h>
+#include <imgui/imgui.h>
+#include <imgui/imgui_impl_glfw.h>
+#include <imgui/imgui_impl_opengl3.h>
 #include <geometry/BoxGeometry.h>
 
 #include <iostream>
@@ -20,6 +23,8 @@ const unsigned int SCREEN_HEIGHT = 600;
 
 int main()
 {
+
+    const char* glslVersion = "#version 330";
 
     glfwInit();
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
@@ -40,6 +45,20 @@ int main()
         std::cout << "Failed to initialize GLAD" << std::endl;
         return -1;
     }
+
+    // --------------------------------
+    // 创建 imgui 上下文
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO();
+    (void)io;
+
+    // 设置样式
+    ImGui::StyleColorsDark();
+    // 设置平台和渲染器
+    ImGui_ImplGlfw_InitForOpenGL(window, true);
+    ImGui_ImplOpenGL3_Init(glslVersion);
+    // --------------------------------
+
     // 设置视口
     // 从左下到右上
     // 这是渲染窗口
@@ -136,6 +155,15 @@ int main()
     {
         processInput(window);
 
+        // 开始 ImGui 帧
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+
+        float f = 0.0f;
+        ImGui::Begin("Hello, world!");
+        ImGui::End();
+
         // 渲染指令
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -170,6 +198,10 @@ int main()
             glDrawElements(GL_TRIANGLES, boxGeometry.indices.size(), GL_UNSIGNED_INT, 0);
         }
         
+        // ImGui 渲染
+        ImGui::Render();
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
         glfwSwapBuffers(window);
         glfwPollEvents();
     }

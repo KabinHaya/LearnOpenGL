@@ -12,7 +12,7 @@
 #include <string>
 #include <format>
 
-static void ProcessInput(GLFWwindow* window);
+static void processInput(GLFWwindow* window);
 
 int main()
 {
@@ -170,7 +170,7 @@ int main()
 
     while (!glfwWindowShouldClose(window))
     {
-        ProcessInput(window);
+        processInput(window);
 
         // ‰÷»æ÷∏¡Ó
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
@@ -205,7 +205,7 @@ int main()
     return 0;
 }
 
-static void ProcessInput(GLFWwindow* window)
+static void processInput(GLFWwindow* window)
 {
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
     {

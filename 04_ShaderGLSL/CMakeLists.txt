@@ -7,7 +7,7 @@ set(PROJECT_NAME 04_ShaderGLSL)
 add_executable (${PROJECT_NAME}
     main2.cpp
 
-    ${GLAD_SRC_PATH}
+    ${GLAD_SRC}
  )
 
 if (CMAKE_VERSION VERSION_GREATER 3.12)

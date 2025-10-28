@@ -31,7 +31,7 @@ int main()
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-    // ÕâÊÇ´´½¨µÄ´°¿Ú
+    // è¿™æ˜¯åˆ›å»ºçš„çª—å£
     GLFWwindow* window = glfwCreateWindow(800, 600, "LearnOpenGL", nullptr, nullptr);
     if (window == nullptr)
     {
@@ -47,21 +47,21 @@ int main()
     }
 
     // --------------------------------
-    // ´´½¨ imgui ÉÏÏÂÎÄ
+    // åˆ›å»º imgui ä¸Šä¸‹æ–‡
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
     (void)io;
 
-    // ÉèÖÃÑùÊ½
+    // è®¾ç½®æ ·å¼
     ImGui::StyleColorsDark();
-    // ÉèÖÃÆ½Ì¨ºÍäÖÈ¾Æ÷
+    // è®¾ç½®å¹³å°å’Œæ¸²æŸ“å™¨
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init(glslVersion);
     // --------------------------------
 
-    // ÉèÖÃÊÓ¿Ú
-    // ´Ó×óÏÂµ½ÓÒÉÏ
-    // ÕâÊÇäÖÈ¾´°¿Ú
+    // è®¾ç½®è§†å£
+    // ä»å·¦ä¸‹åˆ°å³ä¸Š
+    // è¿™æ˜¯æ¸²æŸ“çª—å£
     glViewport(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
     glEnable(GL_PROGRAM_POINT_SIZE);
     glEnable(GL_BLEND);
@@ -91,14 +91,14 @@ int main()
     
     BoxGeometry boxGeometry(1.0f, 1.0f, 1.0f);
 
-    // Éú³ÉÎÆÀí
+    // ç”Ÿæˆçº¹ç†
     unsigned int texture1, texture2;
     glGenTextures(1, &texture1);
     glBindTexture(GL_TEXTURE_2D, texture1);
 
-    // ÎÆÀí1
+    // çº¹ç†1
 
-    // ÉèÖÃ»·ÈÆºÍ¹ıÂË·½Ê½
+    // è®¾ç½®ç¯ç»•å’Œè¿‡æ»¤æ–¹å¼
     float borderColor[] = { 0.3f, 0.1f, 0.7f, 1.0f };
     glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
 
@@ -107,10 +107,10 @@ int main()
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-    // Í¼ÏñyÖá·­×ª
+    // å›¾åƒyè½´ç¿»è½¬
     stbi_set_flip_vertically_on_load(true);
 
-    // ¼ÓÔØÍ¼Æ¬
+    // åŠ è½½å›¾ç‰‡
     const char* assetsPath = "../../../../assets/";
     std::string imgPath = std::string(assetsPath) + "texture/container.jpg";
     
@@ -125,7 +125,7 @@ int main()
     }
     stbi_image_free(data);
 
-    // ÎÆÀí2
+    // çº¹ç†2
 
     glGenTextures(1, &texture2);
     glBindTexture(GL_TEXTURE_2D, texture2);
@@ -151,21 +151,25 @@ int main()
     ourShader.setInt("texture1", 0);
     ourShader.setInt("texture2", 1);
 
+    float f = 0.0f;
+    ImVec4 clearColor = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
     while (!glfwWindowShouldClose(window))
     {
         processInput(window);
 
-        // ¿ªÊ¼ ImGui Ö¡
+        // å¼€å§‹ ImGui å¸§
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
+        
+        ImGui::Begin("ImGui");
+        ImGui::Text("%.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+        ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
+        ImGui::ColorEdit3("clear color", (float*)&clearColor);
+        ImGui::End();        
 
-        float f = 0.0f;
-        ImGui::Begin("Hello, world!");
-        ImGui::End();
-
-        // äÖÈ¾Ö¸Áî
-        glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+        // æ¸²æŸ“æŒ‡ä»¤
+        glClearColor(clearColor.x, clearColor.y, clearColor.z, clearColor.w);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         ourShader.use();
@@ -198,7 +202,7 @@ int main()
             glDrawElements(GL_TRIANGLES, boxGeometry.indices.size(), GL_UNSIGNED_INT, 0);
         }
         
-        // ImGui äÖÈ¾
+        // ImGui æ¸²æŸ“
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
@@ -206,7 +210,7 @@ int main()
         glfwPollEvents();
     }
 
-    // ×ÊÔ´ÊÍ·Å
+    // èµ„æºé‡Šæ”¾
     boxGeometry.dispose();
 
     glfwTerminate();

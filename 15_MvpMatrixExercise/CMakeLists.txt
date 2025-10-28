@@ -1,6 +1,6 @@
 # 将源代码添加到此项目的可执行文件。
-set(PROJECT_NAME 14_UseImageUI)
-set(COPY_RESOURCES 14_CopyResources)
+set(PROJECT_NAME 15_MvpMatrixExercise)
+set(COPY_RESOURCES 15_CopyResources)
 
 add_executable (${PROJECT_NAME}
     main.cpp

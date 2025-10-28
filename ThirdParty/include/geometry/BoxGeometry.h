@@ -92,7 +92,7 @@ private:
         // normals
         vector[u] = 0;
         vector[v] = 0;
-        vector[w] = depth > 0 ? 1 : -1;
+        vector[w] = depth > 0 ? 1.0f : -1.0f;
         vertex.Normal = glm::vec3(vector.x, vector.y, vector.z);
 
         // uvs
@@ -111,7 +111,7 @@ private:
     {
       for (unsigned int ix = 0; ix < gridX; ix++)
       {
-        float a = numberOfVertices + ix + gridX1 * iy;
+        unsigned int a = numberOfVertices + ix + gridX1 * iy;
         float b = numberOfVertices + ix + gridX1 * (iy + 1);
         float c = numberOfVertices + (ix + 1) + gridX1 * (iy + 1);
         float d = numberOfVertices + (ix + 1) + gridX1 * iy;

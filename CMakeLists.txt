@@ -1,4 +1,4 @@
-﻿# CMakeList.txt: 顶层 CMake 项目文件，在此处执行全局配置
+# CMakeList.txt: 顶层 CMake 项目文件，在此处执行全局配置
 # 并包含子项目。
 #
 cmake_minimum_required (VERSION 3.8)
@@ -8,7 +8,11 @@ if (POLICY CMP0141)
   cmake_policy(SET CMP0141 NEW)
   set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT 
     "$<IF:$<AND:$<C_COMPILER_ID:MSVC>,$<CXX_COMPILER_ID:MSVC>>,$<$<CONFIG:Debug,RelWithDebInfo>:EditAndContinue>,$<$<CONFIG:Debug,RelWithDebInfo>:ProgramDatabase>>"
-  )
+)
+endif()
+
+if(MSVC)
+    add_compile_options(/utf-8) # MSVC使用utf8字符集
 endif()
 
 project ("LearningOpenGL")
@@ -41,7 +45,7 @@ file(GLOB GLAD_SRC
     "${CMAKE_SOURCE_DIR}/ThirdParty/src/glad/glad.c"
 )
 
-# TODO: 这里应该需要修改，要么编译成库
+# TODO: 这里应该需要修改，可编译成库
 file(GLOB IMGUI_SRC
     "${CMAKE_SOURCE_DIR}/ThirdParty/include/imgui/*.cpp"
 )
@@ -61,3 +65,4 @@ add_subdirectory (11_UseSphereGeometry)
 add_subdirectory (12_UseBoxGeometry)
 add_subdirectory (13_ModelViewProjection)
 add_subdirectory (14_UseImageUI)
+add_subdirectory (15_MvpMatrixExercise)

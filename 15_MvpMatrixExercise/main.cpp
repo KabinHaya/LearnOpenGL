@@ -7,6 +7,9 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <tools/shader.h>
 #include <tools/stb_image.h>
+#include <imgui/imgui.h>
+#include <imgui/imgui_impl_glfw.h>
+#include <imgui/imgui_impl_opengl3.h>
 #include <geometry/BoxGeometry.h>
 
 #include <iostream>
@@ -15,11 +18,13 @@
 
 static void processInput(GLFWwindow* window);
 
-const unsigned int SCREEN_WIDTH = 800;
-const unsigned int SCREEN_HEIGHT = 600;
+unsigned int SCREEN_WIDTH = 800;
+unsigned int SCREEN_HEIGHT = 600;
 
 int main()
 {
+
+    const char* glslVersion = "#version 330";
 
     glfwInit();
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
@@ -40,6 +45,20 @@ int main()
         std::cout << "Failed to initialize GLAD" << std::endl;
         return -1;
     }
+
+    // --------------------------------
+    // 创建 imgui 上下文
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO();
+    (void)io;
+
+    // 设置样式
+    ImGui::StyleColorsDark();
+    // 设置平台和渲染器
+    ImGui_ImplGlfw_InitForOpenGL(window, true);
+    ImGui_ImplOpenGL3_Init(glslVersion);
+    // --------------------------------
+
     // 设置视口
     // 从左下到右上
     // 这是渲染窗口
@@ -132,12 +151,25 @@ int main()
     ourShader.setInt("texture1", 0);
     ourShader.setInt("texture2", 1);
 
+    float fov = 45.0f; // 视椎体的角度
+    ImVec4 clearColor = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
     while (!glfwWindowShouldClose(window))
     {
         processInput(window);
 
+        // 开始 ImGui 帧
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+        
+        ImGui::Begin("ImGui");
+        ImGui::Text("%.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+        ImGui::SliderFloat("float", &fov, 0.0f, 360.0f);
+        ImGui::ColorEdit3("clear color", (float*)&clearColor);
+        ImGui::End();
+
         // 渲染指令
-        glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+        glClearColor(clearColor.x, clearColor.y, clearColor.z, clearColor.w);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         ourShader.use();
@@ -153,7 +185,7 @@ int main()
         glm::mat4 view = glm::mat4(1.0f);
         glm::mat4 projection = glm::mat4(1.0f);
         view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
-        projection = glm::perspective(glm::radians(45.0f), (float)SCREEN_WIDTH / (float)SCREEN_HEIGHT, 0.1f, 100.0f);
+        projection = glm::perspective(glm::radians(fov), (float)SCREEN_WIDTH / (float)SCREEN_HEIGHT, 0.1f, 100.0f);
 
         ourShader.setMat4("view", view);
         ourShader.setMat4("projection", projection);
@@ -170,6 +202,10 @@ int main()
             glDrawElements(GL_TRIANGLES, boxGeometry.indices.size(), GL_UNSIGNED_INT, 0);
         }
         
+        // ImGui 渲染
+        ImGui::Render();
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
         glfwSwapBuffers(window);
         glfwPollEvents();
     }

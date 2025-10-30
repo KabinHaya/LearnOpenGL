@@ -15,7 +15,6 @@ endif()
 
 target_include_directories(${PROJECT_NAME} PRIVATE 
     ${MYLIB_INCLUDE_DIR}
-
 )
 target_link_libraries(${PROJECT_NAME}
     ${MYLIB_LIBRARY}

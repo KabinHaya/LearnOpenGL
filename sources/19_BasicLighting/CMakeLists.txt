@@ -15,14 +15,12 @@ endif()
 
 target_include_directories(${PROJECT_NAME} PRIVATE 
     ${MYLIB_INCLUDE_DIR}
-
 )
 target_link_libraries(${PROJECT_NAME}
     ${MYLIB_LIBRARY}
     glad
     imgui
 )
-
 # 将shader文件复制到exe文件的所在目录
 set(RESOURCES_SRC ${CMAKE_CURRENT_SOURCE_DIR}/shader)
 set(RESOURCES_DST ${CMAKE_CURRENT_BINARY_DIR}/shader)

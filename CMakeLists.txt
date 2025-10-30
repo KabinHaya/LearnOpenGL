@@ -17,58 +17,18 @@ endif()
 
 project ("LearningOpenGL")
 
-include_directories(${CMAKE_SOURCE_DIR}/ThirdParty/include)
-set(MYLIB_INCLUDE_DIR 
-    ${CMAKE_SOURCE_DIR}/ThirdParty/include
-    CACHE PATH 
-        "Header directory of OpenGL"
-)
+set(MYLIB_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/third_party/include)
+include_directories(${MYLIB_INCLUDE_DIR})
 
 find_library(MYLIB_LIBRARY
     NAMES 
         glfw3
         assimp-vc143-mtd
     PATHS 
-        set(LIB_DIR ${CMAKE_SOURCE_DIR}/ThirdParty/lib)
+        set(LIB_DIR ${CMAKE_SOURCE_DIR}/third_party/lib)
         
     NO_DEFAULT_PATH
 )
 
-set(MYLIB_LIBRARY 
-    ${MYLIB_LIBRARY} 
-    CACHE FILEPATH 
-        "Path to OpenGL" 
-    FORCE
-)
-
-file(GLOB GLAD_SRC
-    "${CMAKE_SOURCE_DIR}/ThirdParty/src/glad/glad.c"
-)
-
-# TODO: 这里应该需要修改，可编译成库
-file(GLOB IMGUI_SRC
-    "${CMAKE_SOURCE_DIR}/ThirdParty/include/imgui/*.cpp"
-)
-
-# 包含子项目。
-add_subdirectory (01_HelloWindow)
-add_subdirectory (02_HelloTriangle)
-add_subdirectory (03_HelloTriangleExercise)
-add_subdirectory (04_ShaderGLSL)
-add_subdirectory (05_ShaderClass)
-add_subdirectory (06_GLSLExercise)
-add_subdirectory (07_LoadTexture)
-add_subdirectory (08_LoadTextureExercise)
-add_subdirectory (09_Transform)
-add_subdirectory (10_UsePlaneGeometry)
-add_subdirectory (11_UseSphereGeometry)
-add_subdirectory (12_UseBoxGeometry)
-add_subdirectory (13_ModelViewProjection)
-add_subdirectory (14_UseImageUI)
-add_subdirectory (15_MvpMatrixExercise)
-add_subdirectory (16_UseCamera)
-add_subdirectory (17_UseCameraClass)
-add_subdirectory (18_LightScene)
-add_subdirectory (19_BasicLighting)
-add_subdirectory (20_LightMaterial)
-add_subdirectory (21_LightMap)
+add_subdirectory (sources)
+add_subdirectory (third_party)

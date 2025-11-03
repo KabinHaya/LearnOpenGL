@@ -41,7 +41,7 @@ private:
 		// check for errors
 		if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode) // if is Not Zero
 		{
-			cout << "ERROR::ASSIMP:: " << importer.GetErrorString() << endl;
+			std::cout << "ERROR::ASSIMP:: " << importer.GetErrorString() << std::endl;
 			return;
 		}
 		// retrieve the directory path of the filepath
@@ -68,6 +68,7 @@ private:
 			processNode(node->mChildren[i], scene);
 		}
 	}
+
 	Mesh processMesh(aiMesh *mesh, const aiScene *scene)
 	{
 		// data to fill
@@ -186,7 +187,7 @@ private:
 
 unsigned int TextureFromFile(const char *path, const std::string &directory, bool gamma)
 {
-	std::string filename = string(path);
+	std::string filename = std::string(path);
 	filename = directory + '/' + filename;
 
 	unsigned int textureID;
@@ -196,7 +197,7 @@ unsigned int TextureFromFile(const char *path, const std::string &directory, boo
 	unsigned char *data = stbi_load(filename.c_str(), &width, &height, &nrComponents, 0);
 	if (data)
 	{
-		GLenum format;
+		GLenum format = GL_RGB;
 		if (nrComponents == 1)
 			format = GL_RED;
 		else if (nrComponents == 3)

@@ -75,10 +75,10 @@ StyleCopReport.xml
 *_h.h
 *.ilk
 *.meta
-*.obj
+# *.obj # need this type
 *.iobj
 *.pch
-*.pdb
+# *.pdb # 配套lib文件
 *.ipdb
 *.pgc
 *.pgd

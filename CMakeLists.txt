@@ -24,6 +24,7 @@ set(ASSETS_DIR ${CMAKE_SOURCE_DIR}/assets)
 set(MYLIB_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/third_party/include)
 include_directories(${MYLIB_INCLUDE_DIR})
 
+# 设置静态库路径
 find_library(GLFW_LIBRARY
     NAMES
         glfw3
@@ -34,8 +35,15 @@ find_library(GLFW_LIBRARY
 
 find_library(ASSIMP_LIBRARY
     NAMES
-        assimp-vc143-mtd
-        assimp
+        assimp-vc145-mtd
+    PATHS
+        ${CMAKE_SOURCE_DIR}/third_party/lib
+    NO_DEFAULT_PATH
+)
+
+find_library(ZLIB_LIBRARY
+    NAMES
+        zlib
     PATHS
         ${CMAKE_SOURCE_DIR}/third_party/lib
     NO_DEFAULT_PATH
@@ -47,6 +55,10 @@ endif()
 
 if(NOT ASSIMP_LIBRARY)
     message(FATAL_ERROR "Assimp library not found")
+endif()
+
+if(NOT ZLIB_LIBRARY)
+    message(FATAL_ERROR "ZLib library not found")
 endif()
 
 add_subdirectory (src)

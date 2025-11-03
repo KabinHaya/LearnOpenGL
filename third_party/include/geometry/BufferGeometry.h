@@ -12,6 +12,8 @@
 const float PI = glm::pi<float>();
 
 // mesh.h中也定义此属性
+#ifndef DEFINE_VERTEX
+#define DEFINE_VERTEX
 struct Vertex
 {
   glm::vec3 Position;  // 顶点位置
@@ -21,6 +23,7 @@ struct Vertex
   glm::vec3 Tangent;   // 切线
   glm::vec3 Bitangent; // 副切线
 };
+#endif
 
 class BufferGeometry
 {

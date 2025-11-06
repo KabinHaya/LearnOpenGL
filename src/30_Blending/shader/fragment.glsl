@@ -57,6 +57,7 @@ uniform vec3 viewPos;           // 摄像机位置
 uniform Material material;
 uniform DirLight dirLight;
 uniform PointLight pointLights[NR_POINT_LIGHTS];
+uniform SpotLight spotLight;
 
 // 函数
 vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir);
@@ -75,7 +76,7 @@ void main()
     {
         result += CalcPointLight(pointLights[i], norm, outFragPos, viewDir);
     }
-
+    result += CalcSpotLight(spotLight, norm, outFragPos, viewDir);
     FragColor = vec4(result, 1.0f);
 }
 

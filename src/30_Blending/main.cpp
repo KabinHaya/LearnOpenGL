@@ -95,23 +95,27 @@ int main()
     // 从左下到右上
     // 这是渲染窗口
     glViewport(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
-    glEnable(GL_PROGRAM_POINT_SIZE);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
     glEnable(GL_DEPTH_TEST);
 
-    std::vector<glm::vec3> cubePositions {
-        glm::vec3( 2.5f,  0.5f, -2.5f),
-        glm::vec3(-2.5f,  0.5f, -2.5f)
+    std::vector<glm::vec3> cubePositions
+    {
+        glm::vec3( 2.0f,  0.0f,  0.0f),
+        glm::vec3(-1.0f,  0.0f, -1.0f)
     };
 
-    std::vector<glm::vec3> windowPositions{
-        glm::vec3( 0.5f,  0.5f, -2.5f),
-        glm::vec3(-1.5f,  0.5f, -1.5f)
+    std::vector<glm::vec3> windowPositions
+    {
+        glm::vec3(-1.5f, 0.0f, -0.48f),
+        glm::vec3( 1.5f, 0.0f,  0.51f),
+        glm::vec3( 0.0f, 0.0f,  0.7f),
+        glm::vec3(-0.3f, 0.0f, -2.3f),
+        glm::vec3( 0.5f, 0.0f, -0.6f)
     };
 
-    std::vector<glm::vec3> pointLightPositions {
+    std::vector<glm::vec3> pointLightPositions
+    {
         glm::vec3( 1.0f,  2.0f, -1.0f),
         glm::vec3(-1.0f,  2.0f, -1.0f),
         glm::vec3( 4.0f,  2.0f, -4.0f),
@@ -123,23 +127,17 @@ int main()
     
     BoxGeometry boxGeometry(1.0f, 1.0f, 1.0f);
     SphereGeometry sphereGeometry(0.1f, 10.0f, 10.0f);
-    PlaneGeometry planeGeometry(10.0f, 10.0f);
+    PlaneGeometry planeGeometry(1.0f, 1.0f);
         
     unsigned int boxMap    =  loadTexture(std::string(ASSETS_DIR) + "/texture/metal.png");
     unsigned int floorMap  =  loadTexture(std::string(ASSETS_DIR) + "/texture/wood.png");
     unsigned int windowMap =  loadTexture(std::string(ASSETS_DIR) + "/texture/blending_transparent_window.png");
 
-    // 创建贴图
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, boxMap);
-
-    glActiveTexture(GL_TEXTURE1);
-    glBindTexture(GL_TEXTURE_2D, floorMap);
-
-    glActiveTexture(GL_TEXTURE2);
-    glBindTexture(GL_TEXTURE_2D, windowMap);
-
+    
     ourShader.use();
+    ourShader.setInt("material.diffuse", 0);
+    ourShader.setInt("material.specular", 0);
+    ourShader.setFloat("material.shininess", 32.0f);
 
     ImVec4 bgColor = ImVec4(0.2f, 0.2f, 0.3f, 1.0f);
 
@@ -185,11 +183,11 @@ int main()
         // ------------------------------------------------------------
         // 渲染指令
         glClearColor(bgColor.x, bgColor.y, bgColor.z, bgColor.w);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);             
 
-        glm::mat4 model = glm::mat4(1.0f);
         glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCREEN_WIDTH / (float)SCREEN_HEIGHT, 0.1f, 100.0f);
         glm::mat4 view = camera.GetViewMatrix();
+        glm::mat4 model = glm::mat4(1.0f);
 
         ourShader.use();
         ourShader.setMat4("projection", projection);
@@ -211,21 +209,20 @@ int main()
         }
 
         // 创建地面
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, floorMap);
         glBindVertexArray(planeGeometry.VAO);
         model = glm::mat4(1.0f);
         model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
         model = glm::translate(model, glm::vec3(0.0f, 0.0f, -2.0f));
+        model = glm::scale(model, glm::vec3(10.0f));
         ourShader.setMat4("model", model);
-        ourShader.setInt("material.diffuse", 1);
-        ourShader.setInt("material.specular", 1);
-        ourShader.setFloat("material.shininess", 32.0f);
         glDrawElements(GL_TRIANGLES, static_cast<int>(planeGeometry.indices.size()), GL_UNSIGNED_INT, 0);
 
         // 创建箱子
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, boxMap);
         glBindVertexArray(boxGeometry.VAO);
-        ourShader.setInt("material.diffuse", 0);
-        ourShader.setInt("material.specular", 0);
-        ourShader.setFloat("material.shininess", 32.0f);
         for (unsigned int i = 0; i < cubePositions.size(); i++)
         {
             model = glm::mat4(1.0f);
@@ -235,10 +232,9 @@ int main()
         }
 
         // 创建窗户
-        glBindVertexArray(planeGeometry.VAO);
-        ourShader.setInt("material.diffuse", 2);
-        ourShader.setInt("material.specular", 2);
-        ourShader.setFloat("material.shininess", 32.0f);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, windowMap);
+        glBindVertexArray(planeGeometry.VAO);        
         for (unsigned int i = 0; i < windowPositions.size(); i++)
         {
             model = glm::mat4(1.0f);

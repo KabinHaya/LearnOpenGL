@@ -44,12 +44,12 @@ public:
         float b = ix + gridX1 * (iy + 1);
         float c = (ix + 1) + gridX1 * (iy + 1);
         float d = (ix + 1) + gridX1 * iy;
-        this->indices.push_back(a);
-        this->indices.push_back(b);
-        this->indices.push_back(d);
-        this->indices.push_back(b);
-        this->indices.push_back(c);
-        this->indices.push_back(d);
+        this->indices.push_back(static_cast<unsigned int>(a));
+        this->indices.push_back(static_cast<unsigned int>(b));
+        this->indices.push_back(static_cast<unsigned int>(d));
+        this->indices.push_back(static_cast<unsigned int>(b));
+        this->indices.push_back(static_cast<unsigned int>(c));
+        this->indices.push_back(static_cast<unsigned int>(d));
       }
     }
 

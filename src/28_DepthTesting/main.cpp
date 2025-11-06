@@ -101,7 +101,8 @@ int main()
 
     glEnable(GL_DEPTH_TEST);
 
-    glm::vec3 cubePositions[] = {
+    std::vector<glm::vec3> cubePositions
+    {
         glm::vec3(2.0f,  5.0f, -15.0f),
         glm::vec3(-1.5f, -2.2f, -2.5f),
         glm::vec3(-3.8f, -2.0f, -12.3f),
@@ -113,7 +114,8 @@ int main()
         glm::vec3(-1.3f,  1.0f, -1.5f)
     };
 
-    glm::vec3 pointLightPositions[] = {
+    std::vector<glm::vec3> pointLightPositions
+    {
         glm::vec3(0.7f,  0.2f,  2.0f),
         glm::vec3(2.3f, -3.3f, -4.0f),
         glm::vec3(-4.0f,  2.0f, -12.0f),
@@ -141,7 +143,7 @@ int main()
     ourShader.setVec3("dirLight.diffuse", 0.4f, 0.4f, 0.4f);
     ourShader.setVec3("dirLight.specular", 0.5f, 0.5f, 0.5f);
     // 4个点光源
-    for (size_t i = 0; i < 4; ++i)
+    for (size_t i = 0; i < pointLightPositions.size(); ++i)
     {
         ourShader.setVec3(std::format("pointLights[{}].position", i), pointLightPositions[i]);
         ourShader.setVec3(std::format("pointLights[{}].ambient", i), 0.05f, 0.05f, 0.05f);
@@ -214,7 +216,7 @@ int main()
         ourShader.setInt("material.specular", 1);
 
         glBindVertexArray(boxGeometry.VAO);
-        for (unsigned int i = 0; i < 9; i++)
+        for (unsigned int i = 0; i < cubePositions.size(); i++)
         {
             model = glm::mat4(1.0f);
             model = glm::translate(model, cubePositions[i]);
@@ -248,7 +250,7 @@ int main()
         lightObjShader.setMat4("view", view);
 
         glBindVertexArray(sphereGeometry.VAO);
-        for (unsigned int i = 0; i < 4; ++i)
+        for (unsigned int i = 0; i < pointLightPositions.size(); ++i)
         {
             model = glm::mat4(1.0);
             model = glm::translate(model, pointLightPositions[i]);

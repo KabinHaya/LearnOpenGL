@@ -76,7 +76,7 @@ void main()
     {
         result += CalcPointLight(pointLights[i], norm, outFragPos, viewDir);
     }
-    result += CalcSpotLight(spotLight, norm, outFragPos, viewDir);
+    // result += CalcSpotLight(spotLight, norm, outFragPos, viewDir);
 
     FragColor = vec4(result, 1.0f);
 }
@@ -168,6 +168,7 @@ vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewDir)
 }
 
 float LinearizeDepth(float depth, float near, float far)
-{float z = depth * 2.0f - 1.0f; // 转换为 NDC
+{
+    float z = depth * 2.0f - 1.0f; // 转换为 NDC
     return (2.0f * near * far) / (far + near - z * (far - near));
 }

@@ -183,7 +183,9 @@ int main()
         // ------------------------------------------------------------
         // 渲染指令
         glClearColor(bgColor.x, bgColor.y, bgColor.z, bgColor.w);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);             
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        
+        glActiveTexture(GL_TEXTURE0);
 
         glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCREEN_WIDTH / (float)SCREEN_HEIGHT, 0.1f, 100.0f);
         glm::mat4 view = camera.GetViewMatrix();
@@ -193,6 +195,39 @@ int main()
         ourShader.setMat4("projection", projection);
         ourShader.setMat4("view", view);
         ourShader.setVec3("viewPos", camera.Position);
+
+
+        // 创建地面
+        glBindVertexArray(planeGeometry.VAO);        
+        glBindTexture(GL_TEXTURE_2D, floorMap);
+        model = glm::mat4(1.0f);
+        model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+        model = glm::translate(model, glm::vec3(0.0f, 0.0f, -0.5f));
+        model = glm::scale(model, glm::vec3(10.0f));
+        ourShader.setMat4("model", model);
+        glDrawElements(GL_TRIANGLES, static_cast<int>(planeGeometry.indices.size()), GL_UNSIGNED_INT, 0);
+
+        // 创建箱子
+        glBindVertexArray(boxGeometry.VAO);
+        glBindTexture(GL_TEXTURE_2D, boxMap);
+        for (unsigned int i = 0; i < cubePositions.size(); i++)
+        {
+            model = glm::mat4(1.0f);
+            model = glm::translate(model, cubePositions[i]);
+            ourShader.setMat4("model", model);
+            glDrawElements(GL_TRIANGLES, static_cast<int>(boxGeometry.indices.size()), GL_UNSIGNED_INT, 0);
+        }
+
+        // 创建窗户
+        glBindVertexArray(planeGeometry.VAO);
+        glBindTexture(GL_TEXTURE_2D, windowMap);
+        for (unsigned int i = 0; i < windowPositions.size(); i++)
+        {
+            model = glm::mat4(1.0f);
+            model = glm::translate(model, windowPositions[i]);
+            ourShader.setMat4("model", model);
+            glDrawElements(GL_TRIANGLES, static_cast<int>(planeGeometry.indices.size()), GL_UNSIGNED_INT, 0);
+        }
 
         // 创建灯光
         lightingShader.use();
@@ -206,42 +241,6 @@ int main()
             model = glm::scale(model, glm::vec3(0.2f));
             lightingShader.setMat4("model", model);
             glDrawElements(GL_TRIANGLES, static_cast<int>(sphereGeometry.indices.size()), GL_UNSIGNED_INT, 0);
-        }
-
-        // 创建地面
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, floorMap);
-        glBindVertexArray(planeGeometry.VAO);
-        model = glm::mat4(1.0f);
-        model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-        model = glm::translate(model, glm::vec3(0.0f, 0.0f, -2.0f));
-        model = glm::scale(model, glm::vec3(10.0f));
-        ourShader.setMat4("model", model);
-        glDrawElements(GL_TRIANGLES, static_cast<int>(planeGeometry.indices.size()), GL_UNSIGNED_INT, 0);
-
-        // 创建箱子
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, boxMap);
-        glBindVertexArray(boxGeometry.VAO);
-        for (unsigned int i = 0; i < cubePositions.size(); i++)
-        {
-            model = glm::mat4(1.0f);
-            model = glm::translate(model, cubePositions[i]);
-            ourShader.setMat4("model", model);
-            glDrawElements(GL_TRIANGLES, static_cast<int>(boxGeometry.indices.size()), GL_UNSIGNED_INT, 0);
-        }
-
-        // 创建窗户
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, windowMap);
-        glBindVertexArray(planeGeometry.VAO);        
-        for (unsigned int i = 0; i < windowPositions.size(); i++)
-        {
-            model = glm::mat4(1.0f);
-            model = glm::translate(model, windowPositions[i]);
-            model = glm::scale(model, glm::vec3(0.2f));
-            ourShader.setMat4("model", model);
-            glDrawElements(GL_TRIANGLES, static_cast<int>(planeGeometry.indices.size()), GL_UNSIGNED_INT, 0);
         }
 
         // ImGui 渲染

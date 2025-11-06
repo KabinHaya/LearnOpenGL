@@ -108,7 +108,8 @@ int main()
     glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
     glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
 
-    glm::vec3 cubePositions[] = {
+    std::vector<glm::vec3> cubePositions
+    {
         glm::vec3(2.0f,  5.0f, -15.0f),
         glm::vec3(-1.5f, -2.2f, -2.5f),
         glm::vec3(-3.8f, -2.0f, -12.3f),
@@ -120,7 +121,8 @@ int main()
         glm::vec3(-1.3f,  1.0f, -1.5f)
     };
 
-    glm::vec3 pointLightPositions[] = {
+    std::vector<glm::vec3> pointLightPositions
+    {
         glm::vec3(0.7f,  0.2f,  2.0f),
         glm::vec3(2.3f, -3.3f, -4.0f),
         glm::vec3(-4.0f,  2.0f, -12.0f),
@@ -152,7 +154,7 @@ int main()
     ourShader.setVec3("dirLight.diffuse", 0.4f, 0.4f, 0.4f);
     ourShader.setVec3("dirLight.specular", 0.5f, 0.5f, 0.5f);
     // 4个点光源
-    for (size_t i = 0; i < 4; ++i)
+    for (size_t i = 0; i < pointLightPositions.size(); ++i)
     {
         ourShader.setVec3(std::format("pointLights[{}].position", i), pointLightPositions[i]);
         ourShader.setVec3(std::format("pointLights[{}].ambient", i), 0.05f, 0.05f, 0.05f);
@@ -162,15 +164,6 @@ int main()
         ourShader.setFloat(std::format("pointLights[{}].linear", i), 0.09f);
         ourShader.setFloat(std::format("pointLights[{}].quadratic", i), 0.032f);
     }
-    // 聚光
-    ourShader.setVec3("spotLight.ambient", 0.0f, 0.0f, 0.0f);
-    ourShader.setVec3("spotLight.diffuse", 1.0f, 1.0f, 1.0f);
-    ourShader.setVec3("spotLight.specular", 1.0f, 1.0f, 1.0f);
-    ourShader.setFloat("spotLight.constant", 1.0f);
-    ourShader.setFloat("spotLight.linear", 0.09f);
-    ourShader.setFloat("spotLight.quadratic", 0.032f);
-    ourShader.setFloat("spotLight.cutOff", glm::cos(glm::radians(12.5f)));
-    ourShader.setFloat("spotLight.outerCutOff", glm::cos(glm::radians(15.0f)));
 
     // 传递材质属性
     ourShader.setFloat("material.shininess", 32.0f);
@@ -194,6 +187,7 @@ int main()
             ImGui::Text("L: Lock/Unlock Keyboard");
             ImGui::Text("%.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
             ImGui::Text("FOV: %.1f", camera.Zoom);
+            ImGui::Text("x: %.1f, y: %.1f, z: %.1f", camera.Position.x, camera.Position.y, camera.Position.z);
         ImGui::End();
 
         // ------------------------------------------------------------
@@ -222,7 +216,7 @@ int main()
         ourShader.setVec3("viewPos", camera.Position);
 
         glBindVertexArray(boxGeometry.VAO);
-        for (unsigned int i = 0; i < 9; i++)
+        for (unsigned int i = 0; i < cubePositions.size(); i++)
         {
             model = glm::mat4(1.0f);
             model = glm::translate(model, cubePositions[i]);
@@ -233,9 +227,6 @@ int main()
             glDrawElements(GL_TRIANGLES, static_cast<int>(boxGeometry.indices.size()), GL_UNSIGNED_INT, 0);
         }
 
-        // 设置聚光的位置
-        ourShader.setVec3("spotLight.position", camera.Position);
-        ourShader.setVec3("spotLight.direction", camera.Front);
 
         // 设置地面属性
         glStencilMask(0x00);
@@ -259,7 +250,7 @@ int main()
         lightObjShader.setMat4("view", view);
 
         glBindVertexArray(sphereGeometry.VAO);
-        for (unsigned int i = 0; i < 4; ++i)
+        for (unsigned int i = 0; i < pointLightPositions.size(); ++i)
         {
             model = glm::mat4(1.0);
             model = glm::translate(model, pointLightPositions[i]);

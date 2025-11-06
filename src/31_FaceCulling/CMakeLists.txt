@@ -1,8 +1,8 @@
 # 将源代码添加到此项目的可执行文件。
-set(TARGET_NAME 30_Blending)
+set(TARGET_NAME 31_FaceCulling)
 
 add_executable (${TARGET_NAME}
-    main.cpp
+    FaceCulling.cpp
 )
 
 if (CMAKE_VERSION VERSION_GREATER 3.12)

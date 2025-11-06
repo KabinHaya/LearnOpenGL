@@ -9,7 +9,9 @@ enum class Camera_Movement
     FORWARD,
     BACKWARD,
     LEFT,
-    RIGHT
+    RIGHT,
+    UP,
+    DOWN
 };
 
 const float YAW         = -90.0f;
@@ -58,14 +60,23 @@ public:
     void ProcessKeyboard(Camera_Movement direction, float deltaTime)
     {
         float velocity = MovementSpeed * deltaTime;
+        glm::vec3 dirVelocity = glm::vec3(0.0f);
         if (direction == Camera_Movement::FORWARD)
-            Position += Front * velocity;
+            dirVelocity += Front * velocity;
         if (direction == Camera_Movement::BACKWARD)
-            Position -= Front * velocity;
+            dirVelocity -= Front * velocity;
         if (direction == Camera_Movement::LEFT)
-            Position -= Right * velocity;
+            dirVelocity -= Right * velocity;
         if (direction == Camera_Movement::RIGHT)
-            Position += Right * velocity;
+            dirVelocity += Right * velocity;
+
+        dirVelocity.y = 0; // 只允许前后左右在XOZ平面上移动        
+        if (direction == Camera_Movement::UP)
+            dirVelocity.y += (glm::normalize(glm::cross(Right, Front)) * velocity).y;
+        if (direction == Camera_Movement::DOWN)
+            dirVelocity.y -= (glm::normalize(glm::cross(Right, Front)) * velocity).y;
+        
+        Position += dirVelocity;
     }
 
     // processes input received from a mouse input system. Expects the offset value in both the x and y direction.

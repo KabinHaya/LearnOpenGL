@@ -180,7 +180,7 @@ int main()
         ImGui::Begin("ImGui");
             ImGui::Text("ESC: Exit");
             ImGui::Text("WASD: Movement");
-            ImGui::Text("L: Lock/Unlock Keyboard");
+            ImGui::Text("L: Lock/Unlock Cursor");
             ImGui::Text("%.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
             ImGui::Text("FOV: %.1f", camera.Zoom);
         ImGui::End();
@@ -265,7 +265,7 @@ int main()
 }
 
 void processInput(GLFWwindow* window)
-{    
+{
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
 
@@ -278,6 +278,10 @@ void processInput(GLFWwindow* window)
         camera.ProcessKeyboard(Camera_Movement::LEFT, deltaTime);
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
         camera.ProcessKeyboard(Camera_Movement::RIGHT, deltaTime);
+    if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
+        camera.ProcessKeyboard(Camera_Movement::UP, deltaTime);
+    if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS)
+        camera.ProcessKeyboard(Camera_Movement::DOWN, deltaTime);
 }
 
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)

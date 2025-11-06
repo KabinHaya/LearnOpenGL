@@ -59,6 +59,8 @@ uniform DirLight dirLight;
 uniform PointLight pointLights[NR_POINT_LIGHTS];
 uniform SpotLight spotLight;
 
+uniform sampler2D tempTex;
+
 // 函数
 vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir);
 vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir);
@@ -68,16 +70,20 @@ float LinearizeDepth(float depth, float near, float far);
 void main()
 {
     // 属性
-    vec3 norm = normalize(outNormal);
-    vec3 viewDir = normalize(viewPos - outFragPos);
-
-    vec3 result = CalcDirLight(dirLight, norm, viewDir);
-    for (int i = 0; i < NR_POINT_LIGHTS; i++)
-    {
-        result += CalcPointLight(pointLights[i], norm, outFragPos, viewDir);
-    }
+    // vec3 norm = normalize(outNormal);
+    // vec3 viewDir = normalize(viewPos - outFragPos);
+    // 
+    // vec3 result = CalcDirLight(dirLight, norm, viewDir);
+    // for (int i = 0; i < NR_POINT_LIGHTS; i++)
+    // {
+    //     result += CalcPointLight(pointLights[i], norm, outFragPos, viewDir);
+    // }
     // result += CalcSpotLight(spotLight, norm, outFragPos, viewDir);
-    FragColor = vec4(result, 1.0f);
+    // FragColor = vec4(result, 1.0f);
+    vec4 texColor = texture(tempTex, outTexCoord);
+    if (texColor.a < 0.1)
+        discard;
+    FragColor = texColor;
 }
 
 // calculates the color when using a directional light.

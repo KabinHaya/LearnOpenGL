@@ -1,6 +1,6 @@
-add_library(
-    glad
-    glad.c
+add_library(glad
+    STATIC
+        glad.c
 )
 
 target_include_directories(glad

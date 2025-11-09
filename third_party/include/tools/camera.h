@@ -59,6 +59,8 @@ public:
     // processes input received from any keyboard-like input system. Accepts input parameter in the form of camera defined ENUM (to abstract it from windowing systems)
     void ProcessKeyboard(Camera_Movement direction, float deltaTime)
     {
+        // 这个只在XOZ平面上前后左右的方式有问题，必须朝着前进才能速度全满
+
         float velocity = MovementSpeed * deltaTime;
         glm::vec3 dirVelocity = glm::vec3(0.0f);
         if (direction == Camera_Movement::FORWARD)
@@ -70,7 +72,7 @@ public:
         if (direction == Camera_Movement::RIGHT)
             dirVelocity += Right * velocity;
 
-        dirVelocity.y = 0; // 只允许前后左右在XOZ平面上移动        
+        dirVelocity.y = 0; // 只允许前后左右在XOZ平面上移动
         if (direction == Camera_Movement::UP)
             dirVelocity.y += (glm::normalize(glm::cross(Right, Front)) * velocity).y;
         if (direction == Camera_Movement::DOWN)

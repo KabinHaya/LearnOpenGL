@@ -281,6 +281,7 @@ int main()
         // ------------------------------------------------------------
         // 回到默认的帧缓冲上
         glBindFramebuffer(GL_FRAMEBUFFER, 0);  
+        glViewport(oldViewport[0], oldViewport[1], oldViewport[2], oldViewport[3]);
         glClearColor(bgColor.x, bgColor.y, bgColor.z, bgColor.w);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -331,9 +332,13 @@ int main()
         glBindVertexArray(frameGeometry.VAO);
         glBindTexture(GL_TEXTURE_2D, texColorbuffer);
 
-        // 恢复原 viewport 和深度测试状态
+        // 设置 inset viewport 并绘制
+        glViewport(insetX, insetY, insetW, insetH);
+        glDrawElements(GL_TRIANGLES, static_cast<int>(frameGeometry.indices.size()), GL_UNSIGNED_INT, 0);
+
+        // 恢复原 viewport 与深度测试状态
         glViewport(oldViewport[0], oldViewport[1], oldViewport[2], oldViewport[3]);
-        glDrawElements(GL_TRIANGLES, static_cast<int>(frameGeometry.indices.size()), GL_UNSIGNED_INT, 0);        
+        glEnable(GL_DEPTH_TEST);
 
         // ImGui 渲染
         ImGui::Render();

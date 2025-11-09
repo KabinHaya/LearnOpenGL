@@ -1,8 +1,8 @@
 # 将源代码添加到此项目的可执行文件。
-set(TARGET_NAME 4_5_Framebuffers)
+set(TARGET_NAME 4_5_FrameBuffers)
 
 add_executable (${TARGET_NAME}
-    Framebuffers.cpp
+    FrameBuffers.cpp
 )
 
 if (CMAKE_VERSION VERSION_GREATER 3.12)

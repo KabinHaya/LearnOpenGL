@@ -221,7 +221,6 @@ int main()
         {
             model = glm::mat4(1.0f);
             model = glm::translate(model, grassPositions[i]);
-            model = glm::rotate(model, glm::radians(180.0f), glm::vec3(0.0f, 0.0f, 1.0f));
             sceneShader.setMat4("model", model);
             glDrawElements(GL_TRIANGLES, static_cast<int>(planeGeometry.indices.size()), GL_UNSIGNED_INT, 0);
         }
@@ -328,6 +327,8 @@ unsigned int loadTexture(std::string_view path)
     unsigned int textureID;
     glGenTextures(1, &textureID);
 
+    // 图像y轴翻转
+    stbi_set_flip_vertically_on_load(true);
     int width, height, nrComponents;
     unsigned char* data = stbi_load(path.data(), &width, &height, &nrComponents, 0);
     if (data)

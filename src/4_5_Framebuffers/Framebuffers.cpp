@@ -61,6 +61,7 @@ int main()
         glfwTerminate();
         return -1;
     }
+    glfwMakeContextCurrent(window);
     if (!gladLoadGLLoader(reinterpret_cast<GLADloadproc>(glfwGetProcAddress)))
     {
         std::cout << "Failed to initialize GLAD" << std::endl;
@@ -71,7 +72,6 @@ int main()
         1.注册窗口变化监听
         2.注册鼠标事件
     */
-    glfwMakeContextCurrent(window);
     glfwSetFramebufferSizeCallback(window, [](GLFWwindow* window, int width, int height)
         {
             glViewport(0, 0, width, height);
@@ -120,7 +120,7 @@ int main()
 
     Shader sceneShader(std::string(SHADER_DIR) + "/scene.vert", std::string(SHADER_DIR) + "/scene.frag");
     Shader lightingShader(std::string(SHADER_DIR) + "/lighting.vert", std::string(SHADER_DIR) + "/lighting.frag");
-    Shader framebufferShader(std::string(SHADER_DIR) + "/framebuffer.vert", std::string(SHADER_DIR) + "/framebuffer.frag");
+    Shader frameBufferShader(std::string(SHADER_DIR) + "/frameBuffer.vert", std::string(SHADER_DIR) + "/frameBuffer.frag");
     
     BoxGeometry boxGeometry(1.0f, 1.0f, 1.0f);
     SphereGeometry sphereGeometry(0.1f, 10.0f, 10.0f);
@@ -152,26 +152,26 @@ int main()
     }
 
     // 帧缓冲设置
-    framebufferShader.use();
-    framebufferShader.setInt("screenTexture", 0);
+    frameBufferShader.use();
+    frameBufferShader.setInt("screenTexture", 0);
 
-    unsigned int framebuffer;
-    glGenFramebuffers(1, &framebuffer);
-    glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+    unsigned int frameBuffer;
+    glGenFramebuffers(1, &frameBuffer);
+    glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
     // 构建一个颜色附件材质
-    unsigned int texColorbuffer;
-    glGenTextures(1, &texColorbuffer);
-    glBindTexture(GL_TEXTURE_2D, texColorbuffer);
+    unsigned int texColorBuffer;
+    glGenTextures(1, &texColorBuffer);
+    glBindTexture(GL_TEXTURE_2D, texColorBuffer);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, SCREEN_WIDTH, SCREEN_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texColorbuffer, 0);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texColorBuffer, 0);
 
-    unsigned int renderbuffer;
-    glGenRenderbuffers(1, &renderbuffer);
-    glBindRenderbuffer(GL_RENDERBUFFER, renderbuffer);
+    unsigned int renderBuffer;
+    glGenRenderbuffers(1, &renderBuffer);
+    glBindRenderbuffer(GL_RENDERBUFFER, renderBuffer);
     glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, SCREEN_WIDTH, SCREEN_HEIGHT);
-    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, renderbuffer);
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, renderBuffer);
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
         std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std:: endl;
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -202,7 +202,7 @@ int main()
 
         // ------------------------------------------------------------
         // 渲染指令
-        glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+        glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
         glEnable(GL_DEPTH_TEST);
 
         glClearColor(bgColor.x, bgColor.y, bgColor.z, bgColor.w);
@@ -263,9 +263,9 @@ int main()
         glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        framebufferShader.use();
+        frameBufferShader.use();
         glBindVertexArray(frameGeometry.VAO);
-        glBindTexture(GL_TEXTURE_2D, texColorbuffer);
+        glBindTexture(GL_TEXTURE_2D, texColorBuffer);
         glDrawElements(GL_TRIANGLES, static_cast<int>(frameGeometry.indices.size()), GL_UNSIGNED_INT, 0);
 
         // ImGui 渲染
@@ -281,8 +281,8 @@ int main()
     sphereGeometry.dispose();
     planeGeometry.dispose();
     frameGeometry.dispose();
-    glDeleteFramebuffers(1, &framebuffer);
-    glDeleteRenderbuffers(1, &renderbuffer);
+    glDeleteFramebuffers(1, &frameBuffer);
+    glDeleteRenderbuffers(1, &renderBuffer);
 
     glfwTerminate();
     return 0;

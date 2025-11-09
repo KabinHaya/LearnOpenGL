@@ -25,10 +25,13 @@
 static void processInput(GLFWwindow* window);
 static void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
 static void mouseCallback(GLFWwindow* window, double posX, double posY);
+static void scrollCallback(GLFWwindow* window, double offsetX, double offsetY);
 static unsigned int loadTexture(std::string_view path);
+static unsigned int loadCubeMap(std::vector<std::string_view> faces);
+static void drawSkyBox(Shader shader, BoxGeometry geometry, unsigned int cubeMap);
 
-const unsigned int SCREEN_WIDTH = 1280;
-const unsigned int SCREEN_HEIGHT = 720;
+int SCREEN_WIDTH = 1280;
+int SCREEN_HEIGHT = 720;
 
 // 摄像机
 Camera camera(glm::vec3(0.0f, 0.0f, 3.0f), glm::vec3(0.0f, 1.0f, 0.0f));
@@ -77,10 +80,7 @@ int main()
         });
     glfwSetKeyCallback(window, keyCallback);
     glfwSetCursorPosCallback(window, mouseCallback);
-    glfwSetScrollCallback(window, [](GLFWwindow * window, double offsetX, double offsetY)
-        {
-            camera.ProcessMouseScroll(static_cast<float>(offsetY));
-        });
+    glfwSetScrollCallback(window, scrollCallback);
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
     // ------------------------------------------------------------
@@ -101,7 +101,7 @@ int main()
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glEnable(GL_DEPTH_TEST);
-    glEnable(GL_CULL_FACE);
+    // glEnable(GL_CULL_FACE);
     // glCullFace(GL_FRONT);
 
     std::vector<glm::vec3> cubePositions
@@ -118,19 +118,30 @@ int main()
         glm::vec3(-2.0f,  1.5f, -3.0f)
     };
 
-    ImVec4 bgColor = ImVec4(0.15f, 0.15f, 0.20f, 1.0f);
+    std::vector<std::string_view> faces
+    {
+        ASSETS_DIR "/texture/skybox/right.jpg",
+        ASSETS_DIR "/texture/skybox/left.jpg",
+        ASSETS_DIR "/texture/skybox/top.jpg",
+        ASSETS_DIR "/texture/skybox/bottom.jpg",
+        ASSETS_DIR "/texture/skybox/front.jpg",
+        ASSETS_DIR "/texture/skybox/back.jpg",
+    };
 
-    Shader sceneShader(std::string(SHADER_DIR) + "/scene.vert", std::string(SHADER_DIR) + "/scene.frag");
-    Shader lightingShader(std::string(SHADER_DIR) + "/lighting.vert", std::string(SHADER_DIR) + "/lighting.frag");
-    Shader frameBufferShader(std::string(SHADER_DIR) + "/frameBuffer.vert", std::string(SHADER_DIR) + "/frameBuffer.frag");
+    ImVec4 bgColor = ImVec4(0.12f, 0.12f, 0.15f, 1.0f);
+
+    Shader sceneShader(SHADER_DIR "/scene.vert", SHADER_DIR "/scene.frag");
+    Shader lightingShader(SHADER_DIR "/lighting.vert", SHADER_DIR "/lighting.frag");
+    Shader skyBoxShader(SHADER_DIR "/cubeMap.vert", SHADER_DIR "/cubeMap.frag");
     
     BoxGeometry boxGeometry(1.0f, 1.0f, 1.0f);
-    SphereGeometry sphereGeometry(0.1f, 10.0f, 10.0f);
-    PlaneGeometry planeGeometry(1.0f, 1.0f);
-    PlaneGeometry frameGeometry(2.0f, 2.0f);
+    BoxGeometry skyBoxGeometry(1.0f, 1.0f, 1.0f);
+    SphereGeometry pointLightGeometry(0.04f, 10.0f, 10.0f);
+    PlaneGeometry floorGeometry(1.0f, 1.0f);
         
-    unsigned int boxMap    =  loadTexture(std::string(ASSETS_DIR) + "/texture/metal.png");
-    unsigned int floorMap  =  loadTexture(std::string(ASSETS_DIR) + "/texture/wood.png");
+    unsigned int boxMap    =  loadTexture(ASSETS_DIR "/texture/metal.png");
+    unsigned int floorMap  =  loadTexture(ASSETS_DIR "/texture/wood.png");
+    unsigned int cubeMap   =  loadCubeMap(faces);
 
     sceneShader.use();
     sceneShader.setInt("material.diffuse", 0);
@@ -153,41 +164,16 @@ int main()
         sceneShader.setFloat(std::format("pointLights[{}].quadratic", i), 0.032f);
     }
 
-    // 帧缓冲设置
-    frameBufferShader.use();
-    frameBufferShader.setInt("screenTexture", 0);
-
-    unsigned int frameBuffer;
-    glGenFramebuffers(1, &frameBuffer);
-    glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
-    // 构建一个颜色附件材质
-    unsigned int texColorBuffer;
-    glGenTextures(1, &texColorBuffer);
-    glBindTexture(GL_TEXTURE_2D, texColorBuffer);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, SCREEN_WIDTH, SCREEN_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texColorBuffer, 0);
-
-    unsigned int renderBuffer;
-    glGenRenderbuffers(1, &renderBuffer);
-    glBindRenderbuffer(GL_RENDERBUFFER, renderBuffer);
-    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, SCREEN_WIDTH, SCREEN_HEIGHT);
-    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, renderBuffer);
-    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-        std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std:: endl;
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-    // 以线框的方式进行绘制
-    // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    skyBoxShader.use();
+    skyBoxShader.setInt("skyBoxTex", 0);
 
     while (!glfwWindowShouldClose(window))
     {
+        processInput(window);
+
         float currentFrameTime = static_cast<float>(glfwGetTime());
         deltaTime = currentFrameTime - prevFrameTime;
         prevFrameTime = currentFrameTime;
-
-        processInput(window);
 
         // 开始 ImGui 帧
         ImGui_ImplOpenGL3_NewFrame();
@@ -200,76 +186,27 @@ int main()
             ImGui::Text("%.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
             ImGui::Text("FOV: %.1f", camera.Zoom);
             ImGui::Text("x: %.1f, y: %.1f, z: %.1f", camera.Position.x, camera.Position.y, camera.Position.z);
+            ImGui::Text("Actual resolution");
+            ImGui::SliderInt("Width", &SCREEN_WIDTH, 800, 1920);
+            ImGui::SliderInt("Height", &SCREEN_HEIGHT, 600, 1080);
         ImGui::End();
 
         // ------------------------------------------------------------
-        // 渲染指令，将背面的图像存储在帧缓冲里面
-        glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
-        glEnable(GL_DEPTH_TEST);
-
+        // 渲染指令
         glClearColor(bgColor.x, bgColor.y, bgColor.z, bgColor.w);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        // 绘制天空盒
+        drawSkyBox(skyBoxShader, skyBoxGeometry, cubeMap);
+
         glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCREEN_WIDTH / (float)SCREEN_HEIGHT, 0.1f, 100.0f);
         glm::mat4 view = camera.GetViewMatrix();
         glm::mat4 model = glm::mat4(1.0f);
 
-        // 使用旋转矩阵得到背面的视图变换矩阵
-        glm::mat4 invertedView = glm::rotate(glm::mat4(1.0f), glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f)) * view;
-
-
         // 创建灯光
         lightingShader.use();
-        glBindVertexArray(sphereGeometry.VAO);
+        glBindVertexArray(pointLightGeometry.VAO);
         lightingShader.setMat4("projection", projection);
-        lightingShader.setMat4("view", invertedView);
-        for (unsigned int i = 0; i < pointLightPositions.size(); i++)
-        {
-            model = glm::mat4(1.0f);
-            model = glm::translate(model, pointLightPositions[i]);
-            model = glm::scale(model, glm::vec3(0.2f));
-            lightingShader.setMat4("model", model);
-            glDrawElements(GL_TRIANGLES, static_cast<int>(sphereGeometry.indices.size()), GL_UNSIGNED_INT, 0);
-        }
-
-        sceneShader.use();
-        sceneShader.setMat4("projection", projection);
-        sceneShader.setMat4("view", invertedView);
-        sceneShader.setVec3("viewPos", camera.Position);
-
-        glActiveTexture(GL_TEXTURE0);
-
-        // 创建地面
-        glBindVertexArray(planeGeometry.VAO);        
-        glBindTexture(GL_TEXTURE_2D, floorMap);
-        sceneShader.setFloat("material.shininess", 2.0f);
-        model = glm::mat4(1.0f);
-        model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-        model = glm::translate(model, glm::vec3(0.0f, 0.0f, -0.5f));
-        model = glm::scale(model, glm::vec3(10.0f));
-        sceneShader.setMat4("model", model);
-        glDrawElements(GL_TRIANGLES, static_cast<int>(planeGeometry.indices.size()), GL_UNSIGNED_INT, 0);
-
-        // 创建箱子
-        glBindVertexArray(boxGeometry.VAO);
-        glBindTexture(GL_TEXTURE_2D, boxMap);
-        sceneShader.setFloat("material.shininess", 32.0f);
-        for (unsigned int i = 0; i < cubePositions.size(); i++)
-        {
-            model = glm::mat4(1.0f);
-            model = glm::translate(model, cubePositions[i]);
-            sceneShader.setMat4("model", model);
-            glDrawElements(GL_TRIANGLES, static_cast<int>(boxGeometry.indices.size()), GL_UNSIGNED_INT, 0);
-        }
-
-        // ------------------------------------------------------------
-        // 回到默认的帧缓冲上
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);  
-        glClearColor(bgColor.x, bgColor.y, bgColor.z, bgColor.w);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-        // 创建灯光
-        lightingShader.use();
-        glBindVertexArray(sphereGeometry.VAO);
         lightingShader.setMat4("view", view);
         for (unsigned int i = 0; i < pointLightPositions.size(); i++)
         {
@@ -277,7 +214,7 @@ int main()
             model = glm::translate(model, pointLightPositions[i]);
             model = glm::scale(model, glm::vec3(0.2f));
             lightingShader.setMat4("model", model);
-            glDrawElements(GL_TRIANGLES, static_cast<int>(sphereGeometry.indices.size()), GL_UNSIGNED_INT, 0);
+            glDrawElements(GL_TRIANGLES, static_cast<int>(pointLightGeometry.indices.size()), GL_UNSIGNED_INT, 0);
         }
 
         sceneShader.use();
@@ -285,8 +222,10 @@ int main()
         sceneShader.setMat4("view", view);
         sceneShader.setVec3("viewPos", camera.Position);
 
+        glActiveTexture(GL_TEXTURE0);
+
         // 创建地面
-        glBindVertexArray(planeGeometry.VAO);
+        glBindVertexArray(floorGeometry.VAO);        
         glBindTexture(GL_TEXTURE_2D, floorMap);
         sceneShader.setFloat("material.shininess", 2.0f);
         model = glm::mat4(1.0f);
@@ -294,7 +233,7 @@ int main()
         model = glm::translate(model, glm::vec3(0.0f, 0.0f, -0.5f));
         model = glm::scale(model, glm::vec3(10.0f));
         sceneShader.setMat4("model", model);
-        glDrawElements(GL_TRIANGLES, static_cast<int>(planeGeometry.indices.size()), GL_UNSIGNED_INT, 0);
+        glDrawElements(GL_TRIANGLES, static_cast<int>(floorGeometry.indices.size()), GL_UNSIGNED_INT, 0);
 
         // 创建箱子
         glBindVertexArray(boxGeometry.VAO);
@@ -307,31 +246,6 @@ int main()
             sceneShader.setMat4("model", model);
             glDrawElements(GL_TRIANGLES, static_cast<int>(boxGeometry.indices.size()), GL_UNSIGNED_INT, 0);
         }
-
-        // 现在加上这个镜像
-        glDisable(GL_DEPTH_TEST);
-        frameBufferShader.use();
-        glBindVertexArray(frameGeometry.VAO);
-        glBindTexture(GL_TEXTURE_2D, texColorBuffer);
-
-        // 保存当前 viewport
-        GLint oldViewport[4];
-        glGetIntegerv(GL_VIEWPORT, oldViewport);
-
-        // 计算 inset 大小和位置（例如右上角，宽高为屏幕 1/4）
-        int insetW = SCREEN_WIDTH / 4;
-        int insetH = SCREEN_HEIGHT / 4;
-        int margin = 10; // 与边缘距离
-        int insetX = SCREEN_WIDTH - insetW - margin;
-        int insetY = SCREEN_HEIGHT - insetH - margin;
-
-        // 设置 inset viewport 并绘制
-        glViewport(insetX, insetY, insetW, insetH);
-        glDrawElements(GL_TRIANGLES, static_cast<int>(frameGeometry.indices.size()), GL_UNSIGNED_INT, 0);
-
-        // 恢复原 viewport 与深度测试状态
-        glViewport(oldViewport[0], oldViewport[1], oldViewport[2], oldViewport[3]);
-        glEnable(GL_DEPTH_TEST);
 
         // ImGui 渲染
         ImGui::Render();
@@ -343,11 +257,9 @@ int main()
 
     // 资源释放
     boxGeometry.dispose();
-    sphereGeometry.dispose();
-    planeGeometry.dispose();
-    frameGeometry.dispose();
-    glDeleteFramebuffers(1, &frameBuffer);
-    glDeleteRenderbuffers(1, &renderBuffer);
+    pointLightGeometry.dispose();
+    floorGeometry.dispose();
+    skyBoxGeometry.dispose();
 
     glfwTerminate();
     return 0;
@@ -414,11 +326,18 @@ void mouseCallback(GLFWwindow* window, double posXIn, double posYIn)
     camera.ProcessMouseMovement(offsetX, offsetY);
 }
 
+void scrollCallback(GLFWwindow* window, double offsetX, double offsetY)
+{
+    camera.ProcessMouseScroll(static_cast<float>(offsetY));
+}
+
 unsigned int loadTexture(std::string_view path)
 {
     unsigned int textureID;
     glGenTextures(1, &textureID);
 
+    // 图像y轴翻转
+    stbi_set_flip_vertically_on_load(true);
     int width, height, nrComponents;
     unsigned char* data = stbi_load(path.data(), &width, &height, &nrComponents, 0);
     if (data)
@@ -452,4 +371,57 @@ unsigned int loadTexture(std::string_view path)
     stbi_image_free(data);
 
     return textureID;
+}
+
+unsigned int loadCubeMap(std::vector<std::string_view> faces)
+{
+    unsigned int textureID;
+    glGenTextures(1, &textureID);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);
+
+    stbi_set_flip_vertically_on_load(false);
+    for (size_t i = 0; i < faces.size(); i++)
+    {
+        int width, height, nrChannels;
+        unsigned char* data = stbi_load(faces[i].data(), &width, &height, &nrChannels, 0);
+        if (data)
+        {
+            glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i,
+                0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);            
+        }
+        else
+        {
+            std::cout << "Cube map texture failed to load at path: " << faces[i] << std::endl;
+        }
+        stbi_image_free(data);
+    }
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+    return textureID;
+}
+
+void drawSkyBox(Shader shader, BoxGeometry geometry, unsigned int cubeMap)
+{
+    glDepthFunc(GL_LEQUAL);
+
+    glm::mat4 view        =  camera.GetViewMatrix();
+    glm::mat4 projection  =  glm::perspective(glm::radians(camera.Zoom), (float)SCREEN_WIDTH / (float)SCREEN_HEIGHT, 0.1f, 100.0f);
+
+    shader.use();
+    view = glm::mat4(glm::mat3(view)); // 移除平移分量
+
+    shader.setMat4("view", view);
+    shader.setMat4("projection", projection);
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, cubeMap);
+    glBindVertexArray(geometry.VAO);
+    glDrawElements(GL_TRIANGLES, geometry.indices.size(), GL_UNSIGNED_INT, 0);
+
+    glBindVertexArray(0);
+    glEnable(GL_DEPTH_TEST);
 }

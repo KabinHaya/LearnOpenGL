@@ -1,8 +1,8 @@
 # 将源代码添加到此项目的可执行文件。
-set(TARGET_NAME 4_5_FrameBuffers_Exercise)
+set(TARGET_NAME 4_6_EnvMapping)
 
 add_executable (${TARGET_NAME}
-    FrameBuffers_Exercise.cpp
+    EnvMapping.cpp
 )
 
 if (CMAKE_VERSION VERSION_GREATER 3.12)

@@ -16,18 +16,14 @@ struct PointLight {
     float constant;
     float linear;
     float quadratic;
+    float radius;
 
     vec3 ambient;
     vec3 diffuse;
     vec3 specular;
 };
 
-in VS_OUT
-{
-    vec3 FragPos;
-    vec3 Normal;
-    vec2 TexCoords;
-} fs_in;
+in vec2 TexCoords;
 
 #define NR_POINT_LIGHTS 32
 
@@ -41,17 +37,19 @@ vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir, v
 void main()
 {
     // 属性
-    vec3 FragPos = texture(material.gPosition, fs_in.TexCoords).rgb;
-    vec3 Normal = texture(material.gNormal, fs_in.TexCoords).rgb;
-    vec3 Diffuse = texture(material.gAlbedoSpec, fs_in.TexCoords).rgb;
-    float Specular = texture(material.gAlbedoSpec, fs_in.TexCoords).a;
+    vec3 FragPos = texture(material.gPosition, TexCoords).rgb;
+    vec3 Normal = texture(material.gNormal, TexCoords).rgb;
+    vec3 Diffuse = texture(material.gAlbedoSpec, TexCoords).rgb;
+    float Specular = texture(material.gAlbedoSpec, TexCoords).a;
 
     vec3 viewDir = normalize(viewPos - FragPos);
     
     vec3 result = vec3(0.0f);
     for (int i = 0; i < NR_POINT_LIGHTS; i++)
     {
-        result += CalcPointLight(pointLights[i], Normal, FragPos, viewDir, Diffuse, Specular);
+        float distance = length(pointLights[i].position - FragPos);
+        if(distance < pointLights[i].radius)
+            result += CalcPointLight(pointLights[i], Normal, FragPos, viewDir, Diffuse, Specular);
     }
 
     FragColor = vec4(result, 1.0f);

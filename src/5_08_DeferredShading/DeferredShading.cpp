@@ -43,7 +43,7 @@ bool isMouseCaptured = true; // 初始为捕获状态（隐藏鼠标，控制视
 float deltaTime = 0.0f; // 当前帧与上一帧的时间差
 float prevFrameTime = 0.0f; // 上一针的时间
 
-
+// TODO: 真正使用光体积
 int main()
 {
 
@@ -135,13 +135,15 @@ int main()
     }
 
     ImVec4 bgColor = ImVec4(0.02f, 0.02f, 0.03f, 1.0f);
+    stbi_set_flip_vertically_on_load(true);
 
     Shader sceneShader(SHADER_DIR "/scene.vert", SHADER_DIR "/scene.frag");
     Shader lightObjShader(SHADER_DIR "/lightObj.vert", SHADER_DIR "/lightObj.frag");
     Shader gBufferShader(SHADER_DIR "/gBuffer.vert", SHADER_DIR "/gBuffer.frag");    
     
-    SphereGeometry pointLightGeometry(0.05f, 10.0f, 10.0f);
+    BoxGeometry pointLightGeometry(0.2f, 0.2f, 0.2f);
     SphereGeometry objectGeometry(1.0, 50.0, 50.0); // 圆球
+    Model backpack(ASSETS_DIR "/model/backpack/backpack.obj");
 
     PlaneGeometry frameGeometry(2.0f, 2.0f);
     
@@ -221,7 +223,8 @@ int main()
 
         // ------------------------------------------------------------
         // 1. 几何阶段：将场景的几何/颜色数据渲染到 G-Buffer 中
-        glClearColor(bgColor.x, bgColor.y, bgColor.z, 1.0);
+        // glClearColor(bgColor.x, bgColor.y, bgColor.z, 1.0);
+        glClearColor(0, 0, 0, 1.0);
 
         glBindFramebuffer(GL_FRAMEBUFFER, gBuffer);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -232,14 +235,15 @@ int main()
         gBufferShader.use();
         gBufferShader.setMat4("projection", projection);
         gBufferShader.setMat4("view", view);
-
+        
         for (unsigned int i = 0; i < objectPositions.size(); i++)
         {
             model = glm::mat4(1.0f);
             model = glm::translate(model, objectPositions[i]);
             model = glm::scale(model, glm::vec3(0.5f));
             gBufferShader.setMat4("model", model);
-            drawMesh(objectGeometry);
+            // drawMesh(objectGeometry);
+            backpack.Draw(gBufferShader);
         }
 
         // ------------------------------------------------------------
@@ -257,20 +261,25 @@ int main()
         glActiveTexture(GL_TEXTURE2);
         glBindTexture(GL_TEXTURE_2D, gAlbedoSpec);
 
-        for (size_t i = 0; i < lightPositions.size(); ++i)
+        for (unsigned int i = 0; i < lightPositions.size(); ++i)
         {
             sceneShader.setVec3(std::format("pointLights[{}].position", i), lightPositions[i]);
             sceneShader.setVec3(std::format("pointLights[{}].ambient", i), 0.01f, 0.01f, 0.01f);
             sceneShader.setVec3(std::format("pointLights[{}].diffuse", i), lightColors[i]);
             sceneShader.setVec3(std::format("pointLights[{}].specular", i), 0.1f, 0.1f, 0.1f);
 
-            sceneShader.setFloat(std::format("pointLights[{}].constant", i), 1.0f);
-            sceneShader.setFloat(std::format("pointLights[{}].linear", i), 0.09f);
-            sceneShader.setFloat(std::format("pointLights[{}].quadratic", i), 0.032f);
+            const float constant = 1.0f; // note that we don't send this to the shader, we assume it is always 1.0 (in our case)
+            const float linear = 0.7f;
+            const float quadratic = 1.8f;
+            sceneShader.setFloat(std::format("pointLights[{}].constant", i), constant);
+            sceneShader.setFloat(std::format("pointLights[{}].linear", i), linear);
+            sceneShader.setFloat(std::format("pointLights[{}].quadratic", i), quadratic);
+            const float maxBrightness = std::fmaxf(std::fmaxf(lightColors[i].r, lightColors[i].g), lightColors[i].b);
+            float radius = (-linear + std::sqrt(linear * linear - 4 * quadratic * (constant - (256.0f / 5.0f) * maxBrightness))) / (2.0f * quadratic);
+            sceneShader.setFloat(std::format("pointLights[{}].radius", i), radius);
         }
         sceneShader.setMat4("view", view);
         sceneShader.setMat4("projection", projection);
-        sceneShader.setFloat("uvScale", 1.0f);
         sceneShader.setVec3("viewPos", camera.Position);
 
         model = glm::mat4(1.0f);
@@ -291,8 +300,8 @@ int main()
 
         // 绘制灯光物体
         lightObjShader.use();
-        lightObjShader.setMat4("view", view);
         lightObjShader.setMat4("projection", projection);
+        lightObjShader.setMat4("view", view);
 
         for (unsigned int i = 0; i < lightPositions.size(); i++)
         {
@@ -388,6 +397,7 @@ unsigned int loadTexture(std::string_view path)
     unsigned int textureID;
     glGenTextures(1, &textureID);
 
+    stbi_set_flip_vertically_on_load(true);
     int width, height, nrComponents;
     unsigned char* data = stbi_load(path.data(), &width, &height, &nrComponents, 0);
     if (data)

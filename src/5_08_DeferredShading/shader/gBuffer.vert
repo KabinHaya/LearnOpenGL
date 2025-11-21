@@ -16,11 +16,12 @@ uniform mat4 projection;
 
 void main() 
 {
-	vs_out.FragPos = vec3(model * vec4(aPos, 1.0));
+	vec4 worldPos = model * vec4(aPos, 1.0);
+	vs_out.FragPos = worldPos.xyz;
 
 	vs_out.TexCoords = aTexCoords;
 	// 解决不等比缩放，对法向量产生的影响
 	vs_out.Normal = mat3(transpose(inverse(model))) * aNormal;
 
-	gl_Position = projection * view * model * vec4(aPos, 1.0f);
+	gl_Position = projection * view * worldPos;
 }

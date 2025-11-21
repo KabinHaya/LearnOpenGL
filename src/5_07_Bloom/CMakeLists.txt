@@ -1,8 +1,8 @@
 # 将源代码添加到此项目的可执行文件。
-set(TARGET_NAME 5_06_HDR)
+set(TARGET_NAME 5_07_Bloom)
 
 add_executable (${TARGET_NAME}
-    HDR.cpp
+    Bloom.cpp
 )
 
 if (CMAKE_VERSION VERSION_GREATER 3.12)

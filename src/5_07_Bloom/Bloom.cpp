@@ -27,6 +27,8 @@ static void keyCallback(GLFWwindow* window, int key, int scancode, int action, i
 static void mouseCallback(GLFWwindow* window, double posX, double posY);
 
 static unsigned int loadTexture(std::string_view path);
+static void drawMesh(const BufferGeometry& geometry);
+static void drawLightObject(const Shader& shader, const BufferGeometry& geometry, const glm::vec3& position);
 
 const unsigned int SCREEN_WIDTH = 1280;
 const unsigned int SCREEN_HEIGHT = 720;
@@ -37,7 +39,7 @@ float lastX = SCREEN_WIDTH / 2.0f;
 float lastY = SCREEN_HEIGHT / 2.0f;
 bool isFirstMouse = true;
 bool isMouseCaptured = true; // 初始为捕获状态（隐藏鼠标，控制视角）
-bool useHDR = true;
+bool useBloom = true;
 
 // 时机
 float deltaTime = 0.0f; // 当前帧与上一帧的时间差
@@ -114,83 +116,102 @@ int main()
 
     std::vector<glm::vec3> pointLightPositions
     {
-        glm::vec3( 2.0f,  1.5f, -1.0f),
-        glm::vec3(-2.0f,  1.5f, -1.0f),
-        glm::vec3( 2.0f,  1.5f, -3.0f),
-        glm::vec3(-2.0f,  1.5f, -3.0f)
+        glm::vec3( 0.0f, 0.5f,  1.5f),
+        glm::vec3(-4.0f, 0.5f, -3.0f),
+        glm::vec3( 3.0f, 0.5f,  1.0f),
+        glm::vec3(-0.8f, 2.4f, -1.0f)
     };
 
-    std::vector<glm::vec3> pointLightDiffuse
+    std::vector<glm::vec3> pointLightColors
     {
-        glm::vec3(5.0f, 5.0f, 5.0f),
-        glm::vec3(0.1f, 0.0f, 0.0f),
-        glm::vec3(0.0f, 0.0f, 0.2f),
-        glm::vec3(0.0f, 0.1f, 0.0f)
+        glm::vec3( 5.0f, 5.0f,  5.0f),
+        glm::vec3(10.0f, 0.0f,  0.0f),
+        glm::vec3( 0.0f, 0.0f, 15.0f),
+        glm::vec3( 0.0f, 5.0f,  0.0f)
     };
 
-    ImVec4 bgColor = ImVec4(0.1f, 0.1f, 0.12f, 1.0f);
+    ImVec4 bgColor = ImVec4(0.02f, 0.02f, 0.03f, 1.0f);
 
-    Shader sceneShader(std::string(SHADER_DIR) + "/scene.vert", std::string(SHADER_DIR) + "/scene.frag");
-    Shader lightingShader(std::string(SHADER_DIR) + "/lighting.vert", std::string(SHADER_DIR) + "/lighting.frag");
-    Shader hdrShader(std::string(SHADER_DIR) + "/frameBuffer.vert", std::string(SHADER_DIR) + "/frameBuffer.frag");
+    Shader sceneShader(SHADER_DIR "/scene.vert", SHADER_DIR "/scene.frag");
+    Shader lightObjShader(SHADER_DIR "/lightObj.vert", SHADER_DIR "/lightObj.frag");
+    Shader blurShader(SHADER_DIR "/blur.vert", SHADER_DIR "/blur.frag");
+    Shader bloomFinalShader(SHADER_DIR "/bloomFinal.vert", SHADER_DIR "/bloomFinal.frag");
     
     BoxGeometry boxGeometry(1.0f, 1.0f, 1.0f);
-    SphereGeometry sphereGeometry(0.05f, 10.0f, 10.0f);
-    PlaneGeometry planeGeometry(1.0f, 1.0f);
+    BoxGeometry pointLightGeometry(0.2f, 0.2f, 0.2f);
+    PlaneGeometry floorGeometry(1.0f, 1.0f);
     PlaneGeometry frameGeometry(2.0f, 2.0f);
         
-    unsigned int boxMap    =  loadTexture(std::string(ASSETS_DIR) + "/texture/container2.png");
-    unsigned int floorMap  =  loadTexture(std::string(ASSETS_DIR) + "/texture/wood.png");
+    unsigned int boxMap     =  loadTexture(ASSETS_DIR "/texture/container2.png");
+    unsigned int boxSpecMap = loadTexture(ASSETS_DIR "/texture/container2_specular.png");
+    unsigned int floorMap   =  loadTexture(ASSETS_DIR "/texture/wood.png");
 
-    float exposure = 1.0f;
-    const char* toneMappingItems[] = { "Reinhard", "Exposure" };
-    int curToneMapping = 0; // 0 = Exposure, 1 = Reinhard
+    float exposure = 0.5f;
 
     sceneShader.use();
     sceneShader.setInt("material.diffuse", 0);
-    sceneShader.setInt("material.specular", 0);
+    sceneShader.setInt("material.specular", 1);
 
     // 4个点光源
     for (size_t i = 0; i < pointLightPositions.size(); ++i)
     {
         sceneShader.setVec3(std::format("pointLights[{}].position", i), pointLightPositions[i]);
-        sceneShader.setVec3(std::format("pointLights[{}].ambient", i), 0.1f, 0.1f, 0.1f);
-        sceneShader.setVec3(std::format("pointLights[{}].diffuse", i), pointLightDiffuse[i]);
-        sceneShader.setVec3(std::format("pointLights[{}].specular", i), 0.1f, 0.1f, 0.1f);
-        sceneShader.setFloat(std::format("pointLights[{}].constant", i), 1.0f);
-        sceneShader.setFloat(std::format("pointLights[{}].linear", i), 0.09f);
-        sceneShader.setFloat(std::format("pointLights[{}].quadratic", i), 0.032f);
+        sceneShader.setVec3(std::format("pointLights[{}].color", i), pointLightColors[i]);
     }
 
     // 帧缓冲设置
-    hdrShader.use();
-    hdrShader.setInt("screenTexture", 0);
+    blurShader.use();
+    blurShader.setInt("image", 0);
+    bloomFinalShader.use();
+    bloomFinalShader.setInt("screenTex", 0);
+    bloomFinalShader.setInt("bloomBlur", 1);
 
     unsigned int hdrFBO;
     glGenFramebuffers(1, &hdrFBO);
+    glBindFramebuffer(GL_FRAMEBUFFER, hdrFBO);
     // 构建一个颜色附件材质
-    unsigned int texColorBuffer;
-    glGenTextures(1, &texColorBuffer);
-    glBindTexture(GL_TEXTURE_2D, texColorBuffer);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, SCREEN_WIDTH, SCREEN_HEIGHT, 0, GL_RGBA, GL_FLOAT, nullptr); // GL_RGB16F  GL_FLOAT 更改
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texColorBuffer, 0);
+    unsigned int colorBuffers[2];
+    glGenTextures(2, colorBuffers);
+    for (unsigned int i = 0; i < 2; ++i)
+    {
+        glBindTexture(GL_TEXTURE_2D, colorBuffers[i]);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, SCREEN_WIDTH, SCREEN_HEIGHT, 0, GL_RGBA, GL_FLOAT, nullptr); // GL_RGB16F  GL_FLOAT 更改
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);  // we clamp to the edge as the blur filter would otherwise sample repeated texture values!
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i, GL_TEXTURE_2D, colorBuffers[i], 0);
+    }
 
     unsigned int rboDepth;
     glGenRenderbuffers(1, &rboDepth);
     glBindRenderbuffer(GL_RENDERBUFFER, rboDepth);
     glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, SCREEN_WIDTH, SCREEN_HEIGHT);
-    // 附加缓冲
-    glBindFramebuffer(GL_FRAMEBUFFER, hdrFBO);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texColorBuffer, 0);
     glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rboDepth);
+    unsigned int attachments[2] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 };
+    glDrawBuffers(2, attachments);
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
         std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std:: endl;
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-    // 以线框的方式进行绘制
-    // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    unsigned int pingpongFBO[2];
+    unsigned int pingpongColorbuffers[2];
+    glGenFramebuffers(2, pingpongFBO);
+    glGenTextures(2, pingpongColorbuffers);
+    for (unsigned int i = 0; i < 2; ++i)
+    {
+        glBindFramebuffer(GL_FRAMEBUFFER, pingpongFBO[i]);
+        glBindTexture(GL_TEXTURE_2D, pingpongColorbuffers[i]);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, SCREEN_WIDTH, SCREEN_HEIGHT, 0, GL_RGBA, GL_FLOAT, NULL);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE); // we clamp to the edge as the blur filter would otherwise sample repeated texture values!
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, pingpongColorbuffers[i], 0);
+        // also check if framebuffers are complete (no need for depth buffer)
+        if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+            std::cout << "Framebuffer not complete!" << std::endl;
+    }
 
     while (!glfwWindowShouldClose(window))
     {
@@ -211,9 +232,8 @@ int main()
             ImGui::Text("%.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
             ImGui::Text("FOV: %.1f", camera.Zoom);
             ImGui::Text("x: %.1f, y: %.1f, z: %.1f", camera.Position.x, camera.Position.y, camera.Position.z);
-            ImGui::Checkbox("HDR", &useHDR);
-            ImGui::Combo("Tone Mapping", &curToneMapping, toneMappingItems, IM_ARRAYSIZE(toneMappingItems));
-            ImGui::SliderFloat("Exposure", &exposure, 0.0f, 1.0f);
+            ImGui::SliderFloat("HDR Exposure", &exposure, 0.0f, 1.0f);
+            ImGui::Checkbox("Bloom", &useBloom);
         ImGui::End();
 
         // ------------------------------------------------------------
@@ -228,16 +248,17 @@ int main()
         glm::mat4 model = glm::mat4(1.0f);
 
         // 创建灯光
-        lightingShader.use();
-        glBindVertexArray(sphereGeometry.VAO);
-        lightingShader.setMat4("projection", projection);
-        lightingShader.setMat4("view", view);
+        // 绘制灯光物体
+        lightObjShader.use();
+        lightObjShader.setMat4("view", view);
+        lightObjShader.setMat4("projection", projection);
         for (unsigned int i = 0; i < pointLightPositions.size(); i++)
         {
             model = glm::mat4(1.0f);
             model = glm::translate(model, pointLightPositions[i]);
-            lightingShader.setMat4("model", model);
-            glDrawElements(GL_TRIANGLES, static_cast<int>(sphereGeometry.indices.size()), GL_UNSIGNED_INT, 0);
+            lightObjShader.setMat4("model", model);
+            lightObjShader.setVec3("lightColor", pointLightColors[i]);
+            drawMesh(pointLightGeometry);
         }
 
         sceneShader.use();
@@ -245,29 +266,50 @@ int main()
         sceneShader.setMat4("view", view);
         sceneShader.setVec3("viewPos", camera.Position);
 
-        glActiveTexture(GL_TEXTURE0);
 
         // 创建地面
-        glBindVertexArray(planeGeometry.VAO);        
+        glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, floorMap);
-        sceneShader.setFloat("material.shininess", 2.0f);
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, floorMap);
+        sceneShader.setFloat("material.shininess", 32.0f);
         model = glm::mat4(1.0f);
         model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
         model = glm::translate(model, glm::vec3(0.0f, 0.0f, -0.5f));
         model = glm::scale(model, glm::vec3(10.0f));
         sceneShader.setMat4("model", model);
-        glDrawElements(GL_TRIANGLES, static_cast<int>(planeGeometry.indices.size()), GL_UNSIGNED_INT, 0);
+        drawMesh(floorGeometry);
 
         // 创建箱子
-        glBindVertexArray(boxGeometry.VAO);
+        glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, boxMap);
-        sceneShader.setFloat("material.shininess", 32.0f);
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, boxSpecMap);
+        sceneShader.setFloat("material.shininess", 4.0f);
         for (unsigned int i = 0; i < cubePositions.size(); i++)
         {
             model = glm::mat4(1.0f);
             model = glm::translate(model, cubePositions[i]);
             sceneShader.setMat4("model", model);
-            glDrawElements(GL_TRIANGLES, static_cast<int>(boxGeometry.indices.size()), GL_UNSIGNED_INT, 0);
+            drawMesh(boxGeometry);
+        }
+
+        // ------------------------------------------------------------
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        bool isHorizontal = true;
+        bool isFirstIteration = true;
+        unsigned int amount = 10;
+        blurShader.use();
+        glActiveTexture(GL_TEXTURE0);
+        for (unsigned int i = 0; i < amount; i++)
+        {
+            glBindFramebuffer(GL_FRAMEBUFFER, pingpongFBO[isHorizontal]);
+            blurShader.setInt("isHorizontal", isHorizontal);
+            glBindTexture(GL_TEXTURE_2D, isFirstIteration ? colorBuffers[1] : pingpongColorbuffers[!isHorizontal]);  // bind texture of other framebuffer (or scene if first iteration)            
+            drawMesh(frameGeometry);
+            isHorizontal = !isHorizontal;
+            if (isFirstIteration)
+                isFirstIteration = false;
         }
 
         // ------------------------------------------------------------
@@ -275,13 +317,14 @@ int main()
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        hdrShader.use();
-        hdrShader.setBool("useHDR", useHDR);
-        hdrShader.setFloat("exposure", exposure);
-        hdrShader.setInt("toneMappingMode", curToneMapping);
-        glBindVertexArray(frameGeometry.VAO);
-        glBindTexture(GL_TEXTURE_2D, texColorBuffer);
-        glDrawElements(GL_TRIANGLES, static_cast<int>(frameGeometry.indices.size()), GL_UNSIGNED_INT, 0);
+        bloomFinalShader.use();
+        bloomFinalShader.setFloat("exposure", exposure);
+        bloomFinalShader.setBool("useBloom", useBloom);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, colorBuffers[0]);
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, pingpongColorbuffers[!isHorizontal]);
+        drawMesh(frameGeometry);
 
         // ImGui 渲染
         ImGui::Render();
@@ -293,8 +336,8 @@ int main()
 
     // 资源释放
     boxGeometry.dispose();
-    sphereGeometry.dispose();
-    planeGeometry.dispose();
+    pointLightGeometry.dispose();
+    floorGeometry.dispose();
     frameGeometry.dispose();
     glDeleteFramebuffers(1, &hdrFBO);
     glDeleteRenderbuffers(1, &rboDepth);
@@ -407,4 +450,18 @@ unsigned int loadTexture(std::string_view path)
     stbi_image_free(data);
 
     return textureID;
+}
+
+// 绘制物体
+void drawMesh(const BufferGeometry& geometry)
+{
+    glBindVertexArray(geometry.VAO);
+    glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(geometry.indices.size()), GL_UNSIGNED_INT, 0);
+    glBindVertexArray(0);
+}
+
+// 绘制灯光物体
+void drawLightObject(const Shader& shader, const BufferGeometry& geometry, const glm::vec3& position)
+{
+    
 }

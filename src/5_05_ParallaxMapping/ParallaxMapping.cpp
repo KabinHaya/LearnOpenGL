@@ -24,8 +24,8 @@ static void keyCallback(GLFWwindow* window, GLint key, GLint scancode, GLint act
 static void mouseCallback(GLFWwindow* window, GLdouble posX, GLdouble posY);
 
 static GLuint loadTexture(std::string_view path);
-static void drawMesh(BufferGeometry geometry);
-static void drawLightObject(Shader shader, BufferGeometry geometry, glm::vec3 position);
+static void drawMesh(const BufferGeometry& geometry);
+static void drawLightObject(const Shader& shader, const BufferGeometry& geometry, const glm::vec3& position);
 static void renderQuad();
 
 
@@ -327,7 +327,7 @@ GLuint loadTexture(std::string_view path)
 }
 
 // 绘制物体
-void drawMesh(BufferGeometry geometry)
+void drawMesh(const BufferGeometry& geometry)
 {
     glBindVertexArray(geometry.VAO);
     glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(geometry.indices.size()), GL_UNSIGNED_INT, 0);
@@ -335,7 +335,7 @@ void drawMesh(BufferGeometry geometry)
 }
 
 // 绘制灯光物体
-void drawLightObject(Shader shader, BufferGeometry geometry, glm::vec3 position)
+void drawLightObject(const Shader& shader, const BufferGeometry& geometry, const glm::vec3& position)
 {
     glm::mat4 view = camera.GetViewMatrix();
     glm::mat4 projection = glm::mat4(1.0f);

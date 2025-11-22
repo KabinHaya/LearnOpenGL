@@ -14,7 +14,7 @@ int kernelSize = 64;
 float radius = 0.5f;
 float bias = 0.025f;
 
-const vec2 noiseScale = vec2(800.0f / 4.0f, 600.0f / 4.0f);
+const vec2 noiseScale = vec2(1280.0f / 4.0f, 720.0f / 4.0f);
 
 uniform mat4 projection;
 

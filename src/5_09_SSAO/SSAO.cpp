@@ -115,7 +115,6 @@ int main()
     stbi_set_flip_vertically_on_load(true);
 
     Shader sceneShader(SHADER_DIR "/scene.vert", SHADER_DIR "/scene.frag");
-    Shader lightObjShader(SHADER_DIR "/lightObj.vert", SHADER_DIR "/lightObj.frag");
     Shader gBufferShader(SHADER_DIR "/gBuffer.vert", SHADER_DIR "/gBuffer.frag");
     Shader ssaoShader(SHADER_DIR "/ssao.vert", SHADER_DIR "/ssao.frag");
     Shader ssaoBlurShader(SHADER_DIR "/ssaoBlur.vert", SHADER_DIR "/ssaoBlur.frag");
@@ -342,20 +341,21 @@ int main()
         // ------------------------------------------------------------
         // 4.光照阶段: 传统延迟布林冯光照 + SSAO
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         sceneShader.use();
         glm::vec3 lightPosView = glm::vec3(camera.GetViewMatrix() * glm::vec4(lightPos[0], lightPos[1], lightPos[2], 1.0));
 
-        sceneShader.setVec3(std::format("pointLights[{}].position", 1), lightPosView);
-        sceneShader.setVec3(std::format("pointLights[{}].ambient", 1), 0.01f, 0.01f, 0.01f);
-        sceneShader.setVec3(std::format("pointLights[{}].diffuse", 1), lightColor[0], lightColor[1], lightColor[2]);
-        sceneShader.setVec3(std::format("pointLights[{}].specular", 1), 0.1f, 0.1f, 0.1f);
+        sceneShader.setVec3(std::format("pointLights[{}].position", 0), lightPosView);
+        sceneShader.setVec3(std::format("pointLights[{}].ambient", 0), 0.01f, 0.01f, 0.01f);
+        sceneShader.setVec3(std::format("pointLights[{}].diffuse", 0), lightColor[0], lightColor[1], lightColor[2]);
+        sceneShader.setVec3(std::format("pointLights[{}].specular", 0), 0.1f, 0.1f, 0.1f);
 
         const float constant = 1.0f; // note that we don't send this to the shader, we assume it is always 1.0 (in our case)
         const float linear = 0.7f;
         const float quadratic = 1.8f;
-        sceneShader.setFloat(std::format("pointLights[{}].constant", 1), constant);
-        sceneShader.setFloat(std::format("pointLights[{}].linear", 1), linear);
-        sceneShader.setFloat(std::format("pointLights[{}].quadratic", 1), quadratic);
+        sceneShader.setFloat(std::format("pointLights[{}].constant", 0), constant);
+        sceneShader.setFloat(std::format("pointLights[{}].linear", 0), linear);
+        sceneShader.setFloat(std::format("pointLights[{}].quadratic", 0), quadratic);
 
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, gPosition);

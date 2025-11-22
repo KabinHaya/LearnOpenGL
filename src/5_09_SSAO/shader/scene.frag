@@ -38,7 +38,7 @@ void main()
     vec3 Diffuse = texture(gAlbedoSpec, TexCoords).rgb;
     float AmbientOcclusion = texture(ssao, TexCoords).r;
 
-    vec3 viewDir = normalize(viewPos - FragPos);
+    vec3 viewDir = normalize(-FragPos);
     
     vec3 result = vec3(0.0f);
     for (int i = 0; i < NR_POINT_LIGHTS; i++)
@@ -62,7 +62,7 @@ vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir, v
     
     // 镜面反射
     vec3 halfwayDir = normalize(lightDir + viewDir);
-    float spec = pow(max(dot(viewDir, halfwayDir), 0.0), shininess);
+    float spec = pow(max(dot(normal, halfwayDir), 0.0), shininess);
     vec3 specular = light.specular * spec;
     
     // 衰减

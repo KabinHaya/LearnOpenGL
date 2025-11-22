@@ -138,9 +138,9 @@ int main()
     ImVec4 bgColor = ImVec4(0.02f, 0.02f, 0.03f, 1.0f);
     stbi_set_flip_vertically_on_load(true);
 
-    Shader sceneShader(SHADER_DIR "/scene.vert", SHADER_DIR "/scene.frag");
-    Shader lightObjShader(SHADER_DIR "/lightObj.vert", SHADER_DIR "/lightObj.frag");
-    Shader gBufferShader(SHADER_DIR "/gBuffer.vert", SHADER_DIR "/gBuffer.frag");    
+    Shader shaderGeometryPass(SHADER_DIR "/geometryPass.vert", SHADER_DIR "/geometryPass.frag");    
+    Shader shaderLightingPass(SHADER_DIR "/lightingPass.vert", SHADER_DIR "/lightingPass.frag");
+    Shader shaderLightObj(SHADER_DIR "/lightObj.vert", SHADER_DIR "/lightObj.frag");
     
     BoxGeometry pointLightGeometry(0.2f, 0.2f, 0.2f);
     SphereGeometry objectGeometry(1.0, 50.0, 50.0); // 圆球
@@ -148,15 +148,15 @@ int main()
 
     PlaneGeometry frameGeometry(2.0f, 2.0f);
     
-    sceneShader.use();
-    sceneShader.setInt("material.gPosition", 0);
-    sceneShader.setInt("material.gNormal", 1);
-    sceneShader.setInt("material.gAlbedoSpec", 2);
-    sceneShader.setFloat("material.shininess", 32.0f);
+    shaderLightingPass.use();
+    shaderLightingPass.setInt("material.gPosition", 0);
+    shaderLightingPass.setInt("material.gNormal", 1);
+    shaderLightingPass.setInt("material.gAlbedoSpec", 2);
+    shaderLightingPass.setFloat("material.shininess", 32.0f);
 
-    gBufferShader.use();
-    gBufferShader.setInt("texture_diffuse1", 0);
-    gBufferShader.setInt("texture_specular1", 1);
+    shaderGeometryPass.use();
+    shaderGeometryPass.setInt("texture_diffuse1", 0);
+    shaderGeometryPass.setInt("texture_specular1", 1);
 
     // ------------------------------------------------------------
     unsigned int gBuffer;
@@ -233,18 +233,18 @@ int main()
         glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCREEN_WIDTH / (float)SCREEN_HEIGHT, 0.1f, 100.0f);
         glm::mat4 view = camera.GetViewMatrix();
         glm::mat4 model = glm::mat4(1.0f);
-        gBufferShader.use();
-        gBufferShader.setMat4("projection", projection);
-        gBufferShader.setMat4("view", view);
+        shaderGeometryPass.use();
+        shaderGeometryPass.setMat4("projection", projection);
+        shaderGeometryPass.setMat4("view", view);
         
         for (unsigned int i = 0; i < objectPositions.size(); i++)
         {
             model = glm::mat4(1.0f);
             model = glm::translate(model, objectPositions[i]);
             model = glm::scale(model, glm::vec3(0.5f));
-            gBufferShader.setMat4("model", model);
+            shaderGeometryPass.setMat4("model", model);
             // drawMesh(objectGeometry);
-            backpack.Draw(gBufferShader);
+            backpack.Draw(shaderGeometryPass);
         }
 
         // ------------------------------------------------------------
@@ -252,7 +252,7 @@ int main()
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        sceneShader.use();
+        shaderLightingPass.use();
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, gPosition);
 
@@ -264,27 +264,27 @@ int main()
 
         for (unsigned int i = 0; i < lightPositions.size(); ++i)
         {
-            sceneShader.setVec3(std::format("pointLights[{}].position", i), lightPositions[i]);
-            sceneShader.setVec3(std::format("pointLights[{}].ambient", i), 0.01f, 0.01f, 0.01f);
-            sceneShader.setVec3(std::format("pointLights[{}].diffuse", i), lightColors[i]);
-            sceneShader.setVec3(std::format("pointLights[{}].specular", i), 0.1f, 0.1f, 0.1f);
+            shaderLightingPass.setVec3(std::format("pointLights[{}].position", i), lightPositions[i]);
+            shaderLightingPass.setVec3(std::format("pointLights[{}].ambient", i), 0.01f, 0.01f, 0.01f);
+            shaderLightingPass.setVec3(std::format("pointLights[{}].diffuse", i), lightColors[i]);
+            shaderLightingPass.setVec3(std::format("pointLights[{}].specular", i), 0.1f, 0.1f, 0.1f);
 
             const float constant = 1.0f; // note that we don't send this to the shader, we assume it is always 1.0 (in our case)
             const float linear = 0.7f;
             const float quadratic = 1.8f;
-            sceneShader.setFloat(std::format("pointLights[{}].constant", i), constant);
-            sceneShader.setFloat(std::format("pointLights[{}].linear", i), linear);
-            sceneShader.setFloat(std::format("pointLights[{}].quadratic", i), quadratic);
+            shaderLightingPass.setFloat(std::format("pointLights[{}].constant", i), constant);
+            shaderLightingPass.setFloat(std::format("pointLights[{}].linear", i), linear);
+            shaderLightingPass.setFloat(std::format("pointLights[{}].quadratic", i), quadratic);
             const float maxBrightness = std::max({ lightColors[i].r, lightColors[i].g, lightColors[i].b });
             float radius = (-linear + std::sqrt(linear * linear - 4 * quadratic * (constant - (256.0f / 5.0f) * maxBrightness))) / (2.0f * quadratic);
-            sceneShader.setFloat(std::format("pointLights[{}].radius", i), radius);
+            shaderLightingPass.setFloat(std::format("pointLights[{}].radius", i), radius);
         }
-        sceneShader.setMat4("view", view);
-        sceneShader.setMat4("projection", projection);
-        sceneShader.setVec3("viewPos", camera.Position);
+        shaderLightingPass.setMat4("view", view);
+        shaderLightingPass.setMat4("projection", projection);
+        shaderLightingPass.setVec3("viewPos", camera.Position);
 
         model = glm::mat4(1.0f);
-        sceneShader.setMat4("model", model);
+        shaderLightingPass.setMat4("model", model);
         drawMesh(frameGeometry);
 
         // ------------------------------------------------------------
@@ -300,17 +300,17 @@ int main()
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
         // 绘制灯光物体
-        lightObjShader.use();
-        lightObjShader.setMat4("projection", projection);
-        lightObjShader.setMat4("view", view);
+        shaderLightObj.use();
+        shaderLightObj.setMat4("projection", projection);
+        shaderLightObj.setMat4("view", view);
 
         for (unsigned int i = 0; i < lightPositions.size(); i++)
         {
             model = glm::mat4(1.0f);
             model = glm::translate(model, lightPositions[i]);
 
-            lightObjShader.setMat4("model", model);
-            lightObjShader.setVec3("lightColor", lightColors[i]);
+            shaderLightObj.setMat4("model", model);
+            shaderLightObj.setVec3("lightColor", lightColors[i]);
 
             drawMesh(pointLightGeometry);
         }

@@ -4,7 +4,7 @@ out vec4 FragColor;
 // 定义材质结构体
 uniform sampler2D gPosition;
 uniform sampler2D gNormal;
-uniform sampler2D gAlbedoSpec;
+uniform sampler2D gAlbedo;
 uniform sampler2D ssao;
 uniform float shininess;        // 高光指数
 
@@ -24,8 +24,8 @@ in vec2 TexCoords;
 
 #define NR_POINT_LIGHTS 1
 
-uniform vec3 viewPos;           // 摄像机位置
 uniform PointLight pointLights[NR_POINT_LIGHTS];
+uniform bool useSSAO;
 
 // 函数
 vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir, vec3 Diffuse, float ambientOcclusion);
@@ -35,8 +35,8 @@ void main()
     // 属性
     vec3 FragPos = texture(gPosition, TexCoords).rgb;
     vec3 Normal = texture(gNormal, TexCoords).rgb;
-    vec3 Diffuse = texture(gAlbedoSpec, TexCoords).rgb;
-    float AmbientOcclusion = texture(ssao, TexCoords).r;
+    vec3 Diffuse = texture(gAlbedo, TexCoords).rgb;
+    float AmbientOcclusion = useSSAO ? texture(ssao, TexCoords).r : 1.0f;
 
     vec3 viewDir = normalize(-FragPos);
     

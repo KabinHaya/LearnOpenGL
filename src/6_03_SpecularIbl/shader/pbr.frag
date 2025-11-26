@@ -25,6 +25,11 @@ uniform vec3 camPos;
 uniform Material material;
 uniform PointLight pointLights[4];
 
+// IBL
+uniform samplerCube irradianceMap;
+uniform samplerCube prefilterMap;
+uniform sampler2D brdfLUT;
+
 uniform vec3 albedoFactor;
 uniform float metallicFactor;
 uniform float roughnessFactor;
@@ -39,24 +44,25 @@ float DistributionGGX(vec3 N, vec3 H, float roughness);
 float GeometrySchlickGGX(float NdotV, float roughness);
 float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness);
 vec3 fresnelSchlick(float cosTheta, vec3 F0);
+vec3 fresnelSchlickRoughness(float cosTheta, vec3 F0, float roughness);
 
 void main()
 {
-    vec3 albedo = pow(texture(material.albedoMap, fs_in.TexCoords).rgb, vec3(2.2f));
-    float metallic = texture(material.metallicMap, fs_in.TexCoords).r;
-    float roughness = texture(material.roughnessMap, fs_in.TexCoords).r;
-    float ao = texture(material.aoMap, fs_in.TexCoords).r;
-
-    if (!useTexture)
+    vec3 albedo = albedoFactor;
+    float metallic = metallicFactor;
+    float roughness = roughnessFactor;
+    float ao = aoFactor;
+    if (useTexture)
     {
-        albedo    = albedoFactor;
-        metallic  = metallicFactor;
-        roughness = roughnessFactor;
-        ao        = aoFactor;
+        albedo = pow(texture(material.albedoMap, fs_in.TexCoords).rgb, vec3(2.2));
+        metallic = texture(material.metallicMap, fs_in.TexCoords).r;
+        roughness = texture(material.roughnessMap, fs_in.TexCoords).r;
+        ao = texture(material.aoMap, fs_in.TexCoords).r;
     }
 
-    vec3 N = getNormalFromMap();
+    vec3 N = fs_in.Normal;
     vec3 V = normalize(camPos - fs_in.WorldPos);
+    vec3 R = reflect(-V, N);
 
     vec3 F0 = vec3(0.04f);
     F0 = mix(F0, albedo, metallic);
@@ -90,7 +96,23 @@ void main()
         Lo += (kD * albedo / PI + specular) * radiance * NdotL;
     }
 
-    vec3 ambient = vec3(0.03f) * albedo * ao;
+    vec3 F = fresnelSchlickRoughness(max(dot(N, V), 0.0), F0, roughness);
+
+    vec3 kS = F;
+    vec3 kD = 1.0f - kS;
+    kD *= 1.0f - metallic;
+
+    vec3 irradiance = texture(irradianceMap, N).rgb;
+    vec3 diffuse    = irradiance * albedo;
+
+    const float MAX_REFLECTION_LOD = 4.0f;
+    vec3 prefilteredColor = textureLod(prefilterMap, R, roughness * MAX_REFLECTION_LOD).rgb;    
+    vec2 brdf             = texture(brdfLUT, vec2(max(dot(N, V), 0.0), roughness)).rg;
+    vec3 specular         = prefilteredColor * (F * brdf.x + brdf.y);
+
+    vec3 ambient = (kD * diffuse + specular) * ao;
+    // vec3 ambient = vec3(0.002f);
+
 
     vec3 color = ambient + Lo;
     
@@ -104,7 +126,7 @@ void main()
 
 vec3 getNormalFromMap()
 {
-    vec3 tangentNormal = texture(material.normalMap, fs_in.TexCoords).xyz * 2.0f - 1.0f;
+    vec3 tangentNormal = texture(material.normalMap, fs_in.TexCoords).xyz * 2.0 - 1.0;
 
     vec3 Q1  = dFdx(fs_in.WorldPos);
     vec3 Q2  = dFdy(fs_in.WorldPos);
@@ -112,7 +134,7 @@ vec3 getNormalFromMap()
     vec2 st2 = dFdy(fs_in.TexCoords);
 
     vec3 N   = normalize(fs_in.Normal);
-    vec3 T   = normalize(Q1 * st2.t - Q2 * st1.t);
+    vec3 T   = normalize(Q1*st2.t - Q2*st1.t);
     vec3 B   = normalize(cross(T, N));
     mat3 TBN = mat3(T, B, N);
 
@@ -157,4 +179,9 @@ float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness)
 vec3 fresnelSchlick(float cosTheta, vec3 F0)
 {
     return F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
+}
+
+vec3 fresnelSchlickRoughness(float cosTheta, vec3 F0, float roughness)
+{
+    return F0 + (max(vec3(1.0 - roughness), F0) - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
 }

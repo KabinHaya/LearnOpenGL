@@ -32,8 +32,8 @@ static void drawLightObject(Shader shader, BufferGeometry geometry, glm::vec3 po
 static void renderQuad();
 
 
-const GLuint SCREEN_WIDTH = 1280;
-const GLuint SCREEN_HEIGHT = 720;
+int SCREEN_WIDTH = 1280;
+int SCREEN_HEIGHT = 720;
 
 // 摄像机
 Camera camera(glm::vec3(0.0f, 0.0f, 3.0f), glm::vec3(0.0f, 1.0f, 0.0f));
@@ -78,6 +78,8 @@ int main()
     glfwSetFramebufferSizeCallback(window, [](GLFWwindow* window, GLint width, GLint height)
         {
             glViewport(0, 0, width, height);
+            SCREEN_WIDTH = width;
+            SCREEN_HEIGHT = height;
         });
     glfwSetKeyCallback(window, keyCallback);
     glfwSetCursorPosCallback(window, mouseCallback);
@@ -105,8 +107,8 @@ int main()
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LEQUAL);
 
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    //确保立方体正确采样，去除边缘接缝
+    glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 
     std::vector<glm::vec3> lightPositions
     {
@@ -129,19 +131,25 @@ int main()
     Shader lightObjShader(SHADER_DIR "/lightObj.vert", SHADER_DIR "/lightObj.frag");
     Shader equirectangularToCubemapShader(SHADER_DIR "/cubemap.vert", SHADER_DIR "/cubemap.frag");
     Shader irradianceShader(SHADER_DIR "/irradiance.vert", SHADER_DIR "/irradiance.frag");
+
+    Shader prefilterShader(SHADER_DIR "/prefilter.vert", SHADER_DIR "/prefilter.frag");
+    Shader brdfShader(SHADER_DIR "/brdf.vert", SHADER_DIR "/brdf.frag");
+    Shader testBrdfShader(SHADER_DIR "/testBrdf.vert", SHADER_DIR "/testBrdf.frag");
+
     Shader backgroundShader(SHADER_DIR "/background.vert", SHADER_DIR "/background.frag");
     
     SphereGeometry pointLightGeometry(0.05f, 10.0f, 10.0f);
     SphereGeometry objectGeometry(1.0f, 64.0f, 64.0f);      // 圆球
     BoxGeometry envCubeGeometry(5.0f, 5.0f, 5.0f);
+    PlaneGeometry quadGeometry(2.0f, 2.0f);
+
+    Model ourModel(ASSETS_DIR "/model/cerberus/Cerberus.obj");
 
     GLuint hdrMap = loadHdrTexture(ASSETS_DIR "/texture/Alexs_Apt_2k.hdr");
     //GLuint hdrMap = loadHdrTexture(ASSETS_DIR "/texture/Ditch-River_2k.hdr");
 
     ImVec4 bgColor = ImVec4(0.1f, 0.1f, 0.1f, 1.0f);
 
-    int nrRows = 7;
-    int nrColumns = 7;
     float spacing = 2.5;
 
     float albedoFactor[3] = { 0.5f, 0.0f, 0.0f };
@@ -150,10 +158,29 @@ int main()
     float aoFactor = 1.0f;
 
     sceneShader.use();
-    sceneShader.setInt("material.irradianceMap", 0);
+    sceneShader.setInt("irradianceMap", 0);
+    sceneShader.setInt("prefilterMap", 1);
+    sceneShader.setInt("brdfLUT", 2);
+    sceneShader.setInt("material.albedoMap", 3);
+    sceneShader.setInt("material.normalMap", 4);
+    sceneShader.setInt("material.metallicMap", 5);
+    sceneShader.setInt("material.roughnessMap", 6);
+    sceneShader.setInt("material.aoMap", 7);
 
     backgroundShader.use();
     backgroundShader.setInt("envMap", 0);
+
+    GLuint albedoMap1 = loadTexture(ASSETS_DIR "/texture/solar/TexturesCom_PaintedConcreteFloor_1K_albedo.png");
+    GLuint normalMap1 = loadTexture(ASSETS_DIR "/texture/solar/TexturesCom_PaintedConcreteFloor_1K_normal.png");
+    GLuint metallicMap1 = loadTexture(ASSETS_DIR "/texture/solar/TexturesCom_PaintedConcreteFloor_1K_metallic.png");
+    GLuint roughnessMap1 = loadTexture(ASSETS_DIR "/texture/solar/TexturesCom_PaintedConcreteFloor_1K_roughness.png");
+    GLuint aoMap1 = loadTexture(ASSETS_DIR "/texture/solar/TexturesCom_PaintedConcreteFloor_1K_ao.png");
+
+    GLuint albedoMap2 = loadTexture(ASSETS_DIR "/texture/gold/fancy-scaled-gold_albedo.png");
+    GLuint normalMap2 = loadTexture(ASSETS_DIR "/texture/gold/fancy-scaled-gold_normal-ogl.png");
+    GLuint metallicMap2 = loadTexture(ASSETS_DIR "/texture/gold/fancy-scaled-gold_metallic.png");
+    GLuint roughnessMap2 = loadTexture(ASSETS_DIR "/texture/gold/fancy-scaled-gold_roughness.png");
+    GLuint aoMap2 = loadTexture(ASSETS_DIR "/texture/gold/fancy-scaled-gold_ao.png");
 
     // ------------------------------------------------------------
     GLuint captureFBO;
@@ -249,17 +276,84 @@ int main()
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
     // ------------------------------------------------------------
-    //int scrWidth, scrHeight;
-    //glfwGetFramebufferSize(window, &scrWidth, &scrHeight);
-    //glViewport(0, 0, scrWidth, scrHeight);
+    GLuint prefilterMap;
+    glGenTextures(1, &prefilterMap);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, prefilterMap);
+    for (GLuint i = 0; i < 6; ++i)
+    {
+        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB16F, 128, 128, 0, GL_RGB, GL_FLOAT, nullptr);
+    }
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR); // be sure to set minification filter to mip_linear 
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
+
+    // ------------------------------------------------------------
+    prefilterShader.use();
+    prefilterShader.setInt("envMap", 0);
+    prefilterShader.setMat4("projection", captureProjection);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, envCubemap);
+
+    glBindFramebuffer(GL_FRAMEBUFFER, captureFBO);
+    GLuint maxMipLevels = 5;
+    for (GLuint mip = 0; mip < maxMipLevels; ++mip)
+    {
+        GLuint mipWidth = static_cast<GLuint>(128 * std::pow(0.5, mip));
+        GLuint mipHeight = static_cast<GLuint>(128 * std::pow(0.5, mip));
+        glBindRenderbuffer(GL_RENDERBUFFER, captureRBO);
+        glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, mipWidth, mipHeight);
+        glViewport(0, 0, mipWidth, mipHeight);
+
+        float roughness = (float)mip / (float)(maxMipLevels - 1);
+        prefilterShader.setFloat("roughness", roughness);
+        for (GLuint i = 0; i < 6; ++i)
+        {
+            prefilterShader.setMat4("view", captureViews[i]);
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, prefilterMap, mip);
+
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+            drawMesh(envCubeGeometry);
+        }
+    }
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    // ------------------------------------------------------------
+    GLuint brdfLUTTexture;
+    glGenTextures(1, &brdfLUTTexture);
+
+    glBindTexture(GL_TEXTURE_2D, brdfLUTTexture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RG16F, 512, 512, 0, GL_RG, GL_FLOAT, 0);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    glBindFramebuffer(GL_FRAMEBUFFER, captureFBO);
+    glBindRenderbuffer(GL_RENDERBUFFER, captureRBO);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, 512, 512);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, brdfLUTTexture, 0);
+
+    glViewport(0, 0, 512, 512);
+    brdfShader.use();
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    drawMesh(quadGeometry);
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);    
+
     glViewport(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 
-    const char* skyboxes[] = { "Env Cubemap", "Irradiance Map" };
+    const char* skyboxes[] = { "Env Cubemap", "Irradiance Map", "Prefilter Map"};
     int skyboxIdx = 0;
+
+    bool enableTestBrdf = false;
+    bool useTexture = true;
 
     while (!glfwWindowShouldClose(window))
     {
-        processInput(window);
+        processInput(window);        
 
         float currentFrameTime = static_cast<float>(glfwGetTime());
         deltaTime = currentFrameTime - prevFrameTime;
@@ -276,12 +370,20 @@ int main()
             ImGui::Text("%.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
             ImGui::Text("FOV: %.1f", camera.Zoom);
             ImGui::Text("x: %.1f, y: %.1f, z: %.1f", camera.Position.x, camera.Position.y, camera.Position.z);
-            ImGui::SliderFloat3("Albedo", albedoFactor, 0.0f, 1.0f);
-            ImGui::SliderFloat("Roughness", &roughnessFactor, 0.0f, 1.0f);
-            ImGui::SliderFloat("Metallic", &metallicFactor, 0.0f, 1.0f);
-            ImGui::SliderFloat("AO", &aoFactor, 0.0f, 1.0f);
             ImGui::Combo("Skybox", &skyboxIdx, skyboxes, IM_ARRAYSIZE(skyboxes));
+            ImGui::Checkbox("Test BRDF", &enableTestBrdf);
+            ImGui::Checkbox("Texture", &useTexture);
+            if (!useTexture)
+            {
+                ImGui::SliderFloat3("Albedo", albedoFactor, 0.0f, 1.0f);
+                ImGui::SliderFloat("Roughness", &roughnessFactor, 0.0f, 1.0f);
+                ImGui::SliderFloat("Metallic", &metallicFactor, 0.0f, 1.0f);
+                ImGui::SliderFloat("AO", &aoFactor, 0.0f, 1.0f);
+            }
         ImGui::End();
+
+
+        // glViewport(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 
         // ------------------------------------------------------------
         // 渲染指令
@@ -312,27 +414,66 @@ int main()
 
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_CUBE_MAP, irradianceMap);
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, prefilterMap);
+        glActiveTexture(GL_TEXTURE2);
+        glBindTexture(GL_TEXTURE_2D, brdfLUTTexture);
+
+        if (useTexture)
+        {
+            glActiveTexture(GL_TEXTURE3);
+            glBindTexture(GL_TEXTURE_2D, albedoMap1);
+            glActiveTexture(GL_TEXTURE4);
+            glBindTexture(GL_TEXTURE_2D, normalMap1);
+            glActiveTexture(GL_TEXTURE5);
+            glBindTexture(GL_TEXTURE_2D, metallicMap1);
+            glActiveTexture(GL_TEXTURE6);
+            glBindTexture(GL_TEXTURE_2D, roughnessMap1);
+            glActiveTexture(GL_TEXTURE7);
+            glBindTexture(GL_TEXTURE_2D, aoMap1);
+        }
 
         sceneShader.use();
-        sceneShader.setVec3("material.albedo", albedoFactor[0], albedoFactor[1], albedoFactor[2]);
-        sceneShader.setFloat("material.metallic", metallicFactor);
-        sceneShader.setFloat("material.roughness", roughnessFactor);
-        sceneShader.setFloat("material.ao", aoFactor);
+        sceneShader.setBool("useTexture", useTexture);
+        sceneShader.setVec3("albedoFactor", albedoFactor[0], albedoFactor[1], albedoFactor[2]);
+        sceneShader.setFloat("metallicFactor", metallicFactor);
+        sceneShader.setFloat("roughnessFactor", roughnessFactor);
+        sceneShader.setFloat("aoFactor", aoFactor);
 
         sceneShader.setVec3("camPos", camera.Position);
         sceneShader.setMat4("projection", projection);
         sceneShader.setMat4("view", view);
 
-        for (int row = 0; row < nrRows; ++row)
+        model = glm::mat4(1.0f);
+        model = glm::translate(model, glm::vec3(-1 * spacing, 0.0f, 0.0f));
+        sceneShader.setMat4("model", model);
+        drawMesh(objectGeometry);
+
+        if (useTexture)
         {
-            for (int col = 0; col < nrColumns; ++col)
-            {
-                model = glm::mat4(1.0f);
-                model = glm::translate(model, glm::vec3((col - (nrColumns / 2)) * spacing, (row - (nrRows / 2)) * spacing, 0.0f));
-                sceneShader.setMat4("model", model);
-                drawMesh(objectGeometry);
-            }
+            glActiveTexture(GL_TEXTURE3);
+            glBindTexture(GL_TEXTURE_2D, albedoMap2);
+            glActiveTexture(GL_TEXTURE4);
+            glBindTexture(GL_TEXTURE_2D, normalMap2);
+            glActiveTexture(GL_TEXTURE5);
+            glBindTexture(GL_TEXTURE_2D, metallicMap2);
+            glActiveTexture(GL_TEXTURE6);
+            glBindTexture(GL_TEXTURE_2D, roughnessMap2);
+            glActiveTexture(GL_TEXTURE7);
+            glBindTexture(GL_TEXTURE_2D, aoMap2);
         }
+
+        model = glm::mat4(1.0f);
+        model = glm::translate(model, glm::vec3(0 * spacing, 0.0f, 0.0f));
+        sceneShader.setMat4("model", model);
+        drawMesh(objectGeometry);
+
+        // TODO: 正确读取模型的材质
+        model = glm::mat4(1.0f);
+        model = glm::translate(model, glm::vec3(1 * spacing, 0.0f, 0.0f));
+        model = glm::rotate(model, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+        sceneShader.setMat4("model", model);
+        ourModel.Draw(sceneShader);
 
         for (GLuint i = 0; i < lightPositions.size(); ++i)
         {
@@ -341,8 +482,8 @@ int main()
         }
         
         backgroundShader.use();
-        backgroundShader.setMat4("view", view);
         backgroundShader.setMat4("projection", projection);
+        backgroundShader.setMat4("view", view);
         glActiveTexture(GL_TEXTURE0);
         switch (skyboxIdx)
         {
@@ -352,9 +493,23 @@ int main()
         case 1:
             glBindTexture(GL_TEXTURE_CUBE_MAP, irradianceMap);
             break;
+        case 2:
+            glBindTexture(GL_TEXTURE_CUBE_MAP, prefilterMap);
+            break;
         }
 
         drawMesh(envCubeGeometry);
+
+        if (enableTestBrdf)
+        {
+            glViewport(0, 0, 512, 512);
+            testBrdfShader.use();
+            testBrdfShader.setInt("brdfTexture", 0);
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, brdfLUTTexture);
+            drawMesh(quadGeometry);
+            glViewport(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+        }
 
         // ImGui 渲染
         ImGui::Render();
@@ -491,7 +646,7 @@ GLuint loadHdrTexture(std::string_view path)
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);        
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     }
     else
     {
@@ -508,4 +663,4 @@ void drawMesh(BufferGeometry geometry)
     glBindVertexArray(geometry.VAO);
     glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(geometry.indices.size()), GL_UNSIGNED_INT, 0);
     glBindVertexArray(0);
-}////////////////////////////////////////////////////////////////////////
+}

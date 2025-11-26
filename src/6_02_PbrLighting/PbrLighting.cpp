@@ -40,7 +40,7 @@ GLfloat lastX = SCREEN_WIDTH / 2.0f;
 GLfloat lastY = SCREEN_HEIGHT / 2.0f;
 bool isFirstMouse = true;
 bool isMouseCaptured = true; // 初始为捕获状态（隐藏鼠标，控制视角）
-bool useCustomizeMode = false;
+bool useTexture = false;
 
 // 时机
 GLfloat deltaTime = 0.0f; // 当前帧与上一帧的时间差
@@ -176,8 +176,8 @@ int main()
             ImGui::Text("%.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
             ImGui::Text("FOV: %.1f", camera.Zoom);
             ImGui::Text("x: %.1f, y: %.1f, z: %.1f", camera.Position.x, camera.Position.y, camera.Position.z);
-            ImGui::Checkbox("Customize Mode", &useCustomizeMode);
-            if (useCustomizeMode)
+            ImGui::Checkbox("Customize Mode", &useTexture);
+            if (!useTexture)
             {
                 ImGui::SliderFloat3("Albedo", albedoFactor, 0.0f, 5.0f);
                 ImGui::SliderFloat("Roughness", &roughnessFactor, 0.0f, 1.0f);
@@ -214,7 +214,7 @@ int main()
         }
 
         sceneShader.use();
-        sceneShader.setBool("useCustomizeMode", useCustomizeMode);
+        sceneShader.setBool("useTexture", useTexture);
         sceneShader.setVec3("albedoFactor", albedoFactor[0], albedoFactor[1], albedoFactor[2]);
         sceneShader.setFloat("metallicFactor", metallicFactor);
         sceneShader.setFloat("roughnessFactor", roughnessFactor);

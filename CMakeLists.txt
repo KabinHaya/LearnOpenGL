@@ -21,45 +21,23 @@ project (LearningOpenGL)
 set(ASSETS_DIR ${CMAKE_SOURCE_DIR}/assets)
 
 # 设置include路径
-set(MYLIB_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/third_party/include)
+set(MYLIB_INCLUDE_DIR 
+    ${CMAKE_SOURCE_DIR}/third_party/include 
+    ${CMAKE_SOURCE_DIR}/third_party/imgui_backends
+)
 include_directories(${MYLIB_INCLUDE_DIR})
 
-# 设置静态库路径
-find_library(GLFW_LIBRARY
-    NAMES
-        glfw3
-    PATHS
-        ${CMAKE_SOURCE_DIR}/third_party/lib
-    NO_DEFAULT_PATH
+find_package(OpenGL REQUIRED)
+find_package(glfw3 REQUIRED)
+find_package(assimp REQUIRED)
+find_package(glm REQUIRED)
+find_package(glad REQUIRED)
+find_package(imgui REQUIRED)
+
+# 设置 imgui 后端源文件
+set(IMGUI_BACKEND_SOURCES
+    ${CMAKE_SOURCE_DIR}/third_party/imgui_backends/imgui_impl_glfw.cpp
+    ${CMAKE_SOURCE_DIR}/third_party/imgui_backends/imgui_impl_opengl3.cpp
 )
-
-find_library(ASSIMP_LIBRARY
-    NAMES
-        assimp-vc145-mtd
-    PATHS
-        ${CMAKE_SOURCE_DIR}/third_party/lib
-    NO_DEFAULT_PATH
-)
-
-find_library(ZLIB_LIBRARY
-    NAMES
-        zlib
-    PATHS
-        ${CMAKE_SOURCE_DIR}/third_party/lib
-    NO_DEFAULT_PATH
-)
-
-if(NOT GLFW_LIBRARY)
-    message(FATAL_ERROR "GLFW library not found")
-endif()
-
-if(NOT ASSIMP_LIBRARY)
-    message(FATAL_ERROR "Assimp library not found")
-endif()
-
-if(NOT ZLIB_LIBRARY)
-    message(FATAL_ERROR "ZLib library not found")
-endif()
 
 add_subdirectory (src)
-add_subdirectory (third_party)

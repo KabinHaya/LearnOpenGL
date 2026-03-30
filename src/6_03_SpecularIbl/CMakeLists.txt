@@ -2,6 +2,7 @@
 set(TARGET_NAME 6_03_SpecularIbl)
 
 add_executable (${TARGET_NAME}
+    ${IMGUI_BACKEND_SOURCES}
     SpecularIbl.cpp
 )
 
@@ -16,11 +17,12 @@ target_include_directories(${TARGET_NAME} PRIVATE
     ${MYLIB_INCLUDE_DIR}
 )
 target_link_libraries(${TARGET_NAME}
-    ${GLFW_LIBRARY}
-    ${ASSIMP_LIBRARY}
-    ${ZLIB_LIBRARY}
-    glad
-    imgui
+    OpenGL::GL      # 系统 OpenGL 库
+    glfw            # GLFW 库
+    assimp::assimp  # Assimp 库
+    glm::glm        # GLM 头文件库
+    glad::glad      # GLAD 库
+    imgui::imgui    # ImGui 库
 )
 
 # 将目录路径作为编译时宏传递

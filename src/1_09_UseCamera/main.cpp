@@ -7,9 +7,9 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <tools/shader.h>
 #include <tools/stb_image.h>
-#include <imgui/imgui.h>
-#include <imgui/imgui_impl_glfw.h>
-#include <imgui/imgui_impl_opengl3.h>
+#include <imgui.h>
+#include <imgui_impl_glfw.h>
+#include <imgui_impl_opengl3.h>
 #include <geometry/BoxGeometry.h>
 
 #include <iostream>
@@ -93,10 +93,7 @@ int main()
             glViewport(0, 0, width, height);
         });
     glfwSetCursorPosCallback(window, mouseCallback);
-    glfwSetScrollCallback(window, [](GLFWwindow* window, double offsetX, double offsetY)
-    {
-        camera.ProcessMouseScroll(static_cast<float>(offsetY));
-    });
+    glfwSetScrollCallback(window, scrollCallback);
 
     glm::vec3 cubePositions[] = {
         glm::vec3(0.0f,  0.0f,  0.0f),

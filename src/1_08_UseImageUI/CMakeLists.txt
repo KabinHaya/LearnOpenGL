@@ -3,6 +3,7 @@ set(TARGET_NAME 1_08_UseImageUI)
 set(COPY_RESOURCES 14_CopyResources)
 
 add_executable (${TARGET_NAME}
+    ${IMGUI_BACKEND_SOURCES}
     main.cpp
 )
 
@@ -17,11 +18,13 @@ target_include_directories(${TARGET_NAME} PRIVATE
     ${MYLIB_INCLUDE_DIR}
 )
 target_link_libraries(${TARGET_NAME}
-    ${GLFW_LIBRARY}
-    glad
-    imgui
+    OpenGL::GL      # 系统 OpenGL 库
+    glfw            # GLFW 库
+    assimp::assimp  # Assimp 库
+    glm::glm        # GLM 头文件库
+    glad::glad      # GLAD 库
+    imgui::imgui    # ImGui 库
 )
-
 # 将目录路径作为编译时宏传递
 target_compile_definitions(${TARGET_NAME} PRIVATE
     ASSETS_DIR="${ASSETS_DIR}"

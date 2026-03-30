@@ -27,7 +27,7 @@ set(MYLIB_INCLUDE_DIR
 )
 include_directories(${MYLIB_INCLUDE_DIR})
 
-find_package(OpenGL REQUIRED)
+find_package(opengl_system REQUIRED)
 find_package(glfw3 REQUIRED)
 find_package(assimp REQUIRED)
 find_package(glm REQUIRED)

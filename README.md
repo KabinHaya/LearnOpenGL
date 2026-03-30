@@ -10,7 +10,9 @@
 
 这里我只用粗略的方式进行参考，详细的`conan`使用步骤还是去搜索或问AI
 
-1. 安装`conan`，添加配置文件，以我的为例，在Windows平台，使用gcc15，C++版本为20，Debug模式
+1. 安装最新的gcc，可以下载w64devkit，该工具配备了最新的gcc，https://github.com/skeeto/w64devkit
+
+2. 安装`conan`，添加配置文件，以我的为例，在Windows平台，使用gcc15，C++版本为20，Debug模式
 
    ```plaintext
    [settings]
@@ -25,7 +27,9 @@
 
    如果要使用MSVC，俺么请注意一下这的配置文件和这里差距很大
 
-2. 在项目的顶级目录下使用`conan`安装外部库，并运行下面指令
+   不过MSVC编译该项目好像有些问题，暂时没解决
+
+3. 在项目的顶级目录下使用`conan`安装外部库，并运行下面指令
 
    ```bash
    conan install . --build=missing
@@ -33,9 +37,9 @@
 
    如果运行较慢则需要挂梯子（这没办法）
 
-3. 如果使用的是VSCode，那么重启VSCode，在CMake Tools的配置中选择**conan-debug**配置
+4. 如果使用的是VSCode，那么重启VSCode，在CMake Tools的配置中选择**conan-debug**配置
 
-4. 点击底部栏的生成按钮，或者在CMake Tools的调试一栏中选择需要生成的那一节，然后点击底部栏的启动按钮
+5. 点击底部栏的生成按钮，或者在CMake Tools的调试一栏中选择需要生成的那一节，然后点击底部栏的启动按钮
 
 
 

@@ -13,11 +13,9 @@ if (CMAKE_VERSION VERSION_GREATER 3.12)
   )
 endif()
 
-target_include_directories(${TARGET_NAME} PRIVATE 
-    ${MYLIB_INCLUDE_DIR}
-)
+
 target_link_libraries(${TARGET_NAME}
-    OpenGL::GL      # 系统 OpenGL 库
+    opengl::opengl  # 系统 OpenGL 库
     glfw            # GLFW 库
     assimp::assimp  # Assimp 库
     glm::glm        # GLM 头文件库
